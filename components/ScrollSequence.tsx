@@ -36,8 +36,8 @@ type StepMeta = {
   dir: StepDir;
   /** Nodos del filtro de arena del paso (si los tiene). */
   disp: SVGFEDisplacementMapElement | null;
-  blur: SVGFEGaussianBlurElement | null;
   funcR: SVGFEFuncRElement | null;
+  lastScale: number;
   filterId: string;
   /** Hijos de contenido a los que se aplica el filtro (excluye el svg). */
   targets: HTMLElement[];
@@ -148,8 +148,8 @@ export default function ScrollSequence({
       to: parseFloat(el.dataset.to ?? "1"),
       dir: (el.dataset.dir ?? "up") as StepDir,
       disp: el.querySelector<SVGFEDisplacementMapElement>("feDisplacementMap"),
-      blur: el.querySelector<SVGFEGaussianBlurElement>("feGaussianBlur"),
       funcR: el.querySelector<SVGFEFuncRElement>("feFuncR"),
+      lastScale: -1,
       filterId: el.dataset.sandId ?? "",
       targets: Array.from(el.children).filter(
         (c): c is HTMLElement => c instanceof HTMLElement,
@@ -195,15 +195,16 @@ export default function ScrollSequence({
         s.el.style.visibility = e <= 0.001 ? "hidden" : "visible";
 
         // Arena al viento: el contenido se disgrega en ráfagas mientras la
-        // animación está en curso (desplazamiento por ruido + estela).
+        // animación está en curso. Escala cuantizada: menos invalidaciones
+        // del filtro = fluidez.
         if (s.disp && !reducedMotion) {
           const granular = e > 0.001 && e < 0.999;
           if (granular) {
-            s.disp.setAttribute("scale", ((1 - e) * SAND_SCALE).toFixed(1));
-            s.blur?.setAttribute(
-              "stdDeviation",
-              `${((1 - e) * 6).toFixed(2)} 0`,
-            );
+            const scale = Math.round(((1 - e) * SAND_SCALE) / 6) * 6;
+            if (scale !== s.lastScale) {
+              s.lastScale = scale;
+              s.disp.setAttribute("scale", String(scale));
+            }
           }
           for (const target of s.targets) {
             target.style.filter = granular ? `url(#${s.filterId})` : "none";

@@ -15,8 +15,11 @@ const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
 type FilterNodes = {
   disp: Element | null;
-  blur: Element | null;
+  lastScale: number;
 };
+
+/** Cuantiza la escala: menos invalidaciones del filtro = animación fluida. */
+const SCALE_STEP = 6;
 
 /**
  * Entrada "de arena al viento": el contenido llega como una ráfaga de granos
@@ -95,13 +98,13 @@ export default function SandText({
     }
     const nodes = (nodesRef.current ??= {
       disp: outerRef.current?.querySelector("feDisplacementMap") ?? null,
-      blur: outerRef.current?.querySelector("feGaussianBlur") ?? null,
+      lastScale: -1,
     });
-    nodes.disp?.setAttribute("scale", ((1 - v) * grain).toFixed(1));
-    nodes.blur?.setAttribute(
-      "stdDeviation",
-      `${((1 - v) * 6).toFixed(2)} 0`,
-    );
+    const scale = Math.round(((1 - v) * grain) / SCALE_STEP) * SCALE_STEP;
+    if (scale !== nodes.lastScale) {
+      nodes.lastScale = scale;
+      nodes.disp?.setAttribute("scale", String(scale));
+    }
     el.style.filter = v >= 0.999 ? "none" : `url(#${filterId})`;
   });
 

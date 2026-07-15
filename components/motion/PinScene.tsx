@@ -132,7 +132,7 @@ export function Shot({
   const outerRef = useRef<HTMLDivElement | null>(null);
   const filterNodesRef = useRef<{
     disp: Element | null;
-    blur: Element | null;
+    lastScale: number;
   } | null>(null);
   const reduced = useReducedMotion();
 
@@ -157,15 +157,16 @@ export function Shot({
     if (!outer) return;
     const nodes = (filterNodesRef.current ??= {
       disp: outer.querySelector("feDisplacementMap"),
-      blur: outer.querySelector("feGaussianBlur"),
+      lastScale: -1,
     });
     const granular = v > 0.001 && v < 0.999;
     if (granular) {
-      nodes.disp?.setAttribute("scale", ((1 - v) * SAND_SCALE).toFixed(1));
-      nodes.blur?.setAttribute(
-        "stdDeviation",
-        `${((1 - v) * 6).toFixed(2)} 0`,
-      );
+      // Escala cuantizada: menos invalidaciones del filtro = fluidez.
+      const scale = Math.round(((1 - v) * SAND_SCALE) / 6) * 6;
+      if (scale !== nodes.lastScale) {
+        nodes.lastScale = scale;
+        nodes.disp?.setAttribute("scale", String(scale));
+      }
     }
     for (const child of outer.children) {
       if (!(child instanceof HTMLElement)) continue;
