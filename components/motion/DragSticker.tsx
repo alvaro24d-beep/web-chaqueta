@@ -22,7 +22,10 @@ export default function DragSticker() {
         drag
         dragConstraints={area}
         dragElastic={0.18}
-        initial={{ rotate: -12 }}
+        initial={{ rotate: -30, scale: 0, opacity: 0 }}
+        whileInView={{ rotate: -12, scale: 1, opacity: 1 }}
+        viewport={{ once: true, amount: 0.5 }}
+        transition={{ type: "spring", stiffness: 260, damping: 17, delay: 0.35 }}
         whileHover={{ scale: 1.06, rotate: -4 }}
         whileDrag={{ scale: 1.12, rotate: 8 }}
         className="pointer-events-auto absolute right-[5%] top-[14%] flex h-40 w-40 cursor-grab select-none flex-col items-center justify-center rounded-full bg-ember text-center text-coal active:cursor-grabbing"

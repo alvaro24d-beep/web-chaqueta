@@ -37,6 +37,7 @@ export default function SandText({
   duration = 1.2,
   distance = 90,
   grain = 170,
+  when = true,
 }: {
   children: ReactNode;
   className?: string;
@@ -47,6 +48,8 @@ export default function SandText({
   duration?: number;
   distance?: number;
   grain?: number;
+  /** Condición extra para disparar (p. ej. el footer telón ya revelado). */
+  when?: boolean;
 }) {
   const rawId = useId();
   const filterId = `sand${rawId.replace(/[^a-zA-Z0-9]/g, "")}`;
@@ -66,7 +69,7 @@ export default function SandText({
     amount: 0.3,
     margin: "0px 0px -8% 0px",
   });
-  const trigger = mode === "mount" ? ready : inView;
+  const trigger = (mode === "mount" ? ready : inView) && when;
 
   useEffect(() => {
     outerRef.current

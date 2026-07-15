@@ -174,10 +174,6 @@ export default function ScrollSequence({
           s.vec = vecFor(s.dir, edge);
           // El viento sopla del lado por el que se mueve el paso.
           s.funcR?.setAttribute("intercept", s.vec.x > 0 ? "0" : "0.5");
-          // Bordes anclados al inicio/fin de la sección: sin animación.
-          const anchored =
-            edge === "start" ? s.from <= 0.001 : s.to >= 0.999;
-          if (anchored) s.anim = target;
         }
         if (s.anim !== s.target) {
           const dur = s.target === 1 ? ENTER_MS : EXIT_MS;
@@ -286,9 +282,12 @@ export default function ScrollSequence({
     );
     ioActive.observe(section);
 
+    // dt=0: los pasos ya dentro de rango fijan su objetivo pero la animación
+    // no avanza hasta que la sección se acerca (el bucle rAF solo corre
+    // entonces) — la entrada siempre se reproduce a la vista del usuario.
     resize();
     measure();
-    updateSteps(16);
+    updateSteps(0);
 
     return () => {
       active = false;

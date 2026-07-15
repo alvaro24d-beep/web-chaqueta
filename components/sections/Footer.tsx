@@ -1,7 +1,9 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, useInView } from "framer-motion";
+import { useRef } from "react";
 import SandText from "@/components/motion/SandText";
+import { useMediaQuery } from "@/lib/useMediaQuery";
 
 const COLS = [
   {
@@ -24,13 +26,26 @@ const COLS = [
  * reserva el hueco de scroll. En móvil, flujo normal.
  */
 export default function Footer() {
+  // En escritorio el footer está fijo detrás de la página: geométricamente
+  // "en viewport" desde el primer scroll, así que sus animaciones se
+  // dispararían ocultas. El spacer sí vive en el flujo al final del
+  // documento: cuando asoma, el telón se está revelando de verdad.
+  const spacerRef = useRef<HTMLDivElement | null>(null);
+  const revealed = useInView(spacerRef, { once: true, amount: 0.15 });
+  const isCurtain = useMediaQuery("(min-width: 1024px)");
+  const show = revealed || !isCurtain;
+
   return (
     <>
-      <div className="hidden lg:block lg:h-[78vh]" aria-hidden="true" />
+      <div
+        ref={spacerRef}
+        className="hidden lg:block lg:h-[78vh]"
+        aria-hidden="true"
+      />
       <footer className="overflow-hidden border-t border-bone/10 bg-coal px-6 pb-10 pt-20 sm:px-10 lg:fixed lg:inset-x-0 lg:bottom-0 lg:z-0 lg:flex lg:h-[78vh] lg:flex-col lg:justify-center lg:pt-0">
         <div className="mx-auto w-full max-w-7xl">
           <div className="grid gap-14 md:grid-cols-[1.5fr_1fr_1fr_1fr]">
-            <SandText from="left" duration={1.4} grain={180}>
+            <SandText from="left" duration={1.4} grain={180} when={show}>
               <p className="font-display text-6xl uppercase leading-none text-outline sm:text-8xl">
                 Vetta
               </p>
@@ -41,7 +56,12 @@ export default function Footer() {
               </p>
             </SandText>
             {COLS.map((col, i) => (
-              <SandText key={col.title} from="right" delay={0.12 + i * 0.14}>
+              <SandText
+                key={col.title}
+                from="right"
+                delay={0.12 + i * 0.14}
+                when={show}
+              >
                 <nav aria-label={col.title}>
                   <p className="mb-5 font-mono text-[11px] uppercase tracking-[0.3em] text-olive">
                     {col.title}
@@ -64,7 +84,7 @@ export default function Footer() {
               </SandText>
             ))}
           </div>
-          <SandText from="none" delay={0.3} duration={1}>
+          <SandText from="none" delay={0.3} duration={1} when={show}>
             <p className="mt-20 border-t border-bone/10 pt-6 font-mono text-[10px] uppercase tracking-[0.22em] text-bone-dim/70">
               © 2026 Vetta Mountain Equipment — Página ficticia de demostración
             </p>

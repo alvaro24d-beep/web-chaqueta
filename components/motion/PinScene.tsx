@@ -4,6 +4,7 @@ import {
   animate,
   cubicBezier,
   motion,
+  useInView,
   useMotionValue,
   useMotionValueEvent,
   useReducedMotion,
@@ -174,16 +175,38 @@ export function Shot({
     }
   });
 
+  // La escena tiene que asomar en pantalla antes de reproducir nada: los
+  // planos de apertura (from=0) estrenan su entrada cuando el usuario llega,
+  // no de forma invisible al montar.
+  const seen = useInView(outerRef, { once: true, amount: 0.2 });
+
   useEffect(() => {
-    const apply = (p: number, initial: boolean) => {
+    const edgeFor = (p: number) => {
+      const edge = p < (from + to) / 2 ? enter : exit;
+      return { edge, off: edgeOffset(edge, edge === exit) };
+    };
+
+    if (!seen) {
+      if (activeRef.current === null) {
+        // Oculto, colocado en su lado de entrada, a la espera de asomar.
+        const { off } = edgeFor(progress.get());
+        opacity.set(0);
+        x.set(off.x);
+        y.set(off.y);
+        scale.set(off.scale);
+        compose.set(0);
+      }
+      return;
+    }
+
+    const apply = (p: number) => {
       const inRange = p >= from && p <= to;
       if (inRange === activeRef.current) return;
       activeRef.current = inRange;
 
       // Lado del borde cruzado: entrando/saliendo por el inicio del rango se
       // usa el lado de entrada; por el final, el de salida.
-      const edge = p < (from + to) / 2 ? enter : exit;
-      const off = edgeOffset(edge, edge === exit);
+      const { edge, off } = edgeFor(p);
 
       // El viento sopla del lado por el que se mueve el plano.
       outerRef.current
@@ -192,7 +215,7 @@ export function Shot({
 
       controlsRef.current.forEach((c) => c.stop());
 
-      if (initial || reduced) {
+      if (reduced) {
         opacity.set(inRange ? 1 : 0);
         x.set(inRange ? 0 : off.x);
         y.set(inRange ? 0 : off.y);
@@ -217,13 +240,13 @@ export function Shot({
       ];
     };
 
-    apply(progress.get(), true);
-    const unsubscribe = progress.on("change", (p) => apply(p, false));
+    apply(progress.get());
+    const unsubscribe = progress.on("change", apply);
     return () => {
       unsubscribe();
       controlsRef.current.forEach((c) => c.stop());
     };
-  }, [from, to, enter, exit, reduced, progress, opacity, x, y, scale, compose]);
+  }, [seen, from, to, enter, exit, reduced, progress, opacity, x, y, scale, compose]);
 
   return (
     <motion.div

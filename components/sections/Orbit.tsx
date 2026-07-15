@@ -9,7 +9,7 @@ export default function Orbit() {
       heightVh={400}
       ariaLabel="Ajuste y patronaje — vista 360 grados"
     >
-      <SeqStep from={0} to={1} className="left-6 top-24 sm:left-10">
+      <SeqStep from={0} to={1} dir="left" className="left-6 top-24 sm:left-10">
         <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-bone-dim">
           Ajuste 360°
           <span className="ml-4 text-ember">giro completo</span>
