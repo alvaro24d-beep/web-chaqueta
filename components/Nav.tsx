@@ -2,6 +2,7 @@
 
 import { motion, type Variants } from "framer-motion";
 import { useState } from "react";
+import { usePreloadComplete } from "@/lib/frameStore";
 
 const LINKS = [
   { href: "#detalles", label: "Detalles" },
@@ -26,11 +27,13 @@ const ITEM: Variants = {
 
 export default function Nav() {
   const [hovered, setHovered] = useState<string | null>(null);
+  // La entrada espera a que el Preloader suelte la página.
+  const ready = usePreloadComplete();
 
   return (
     <motion.header
       initial={{ y: -70, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
+      animate={ready ? { y: 0, opacity: 1 } : { y: -70, opacity: 0 }}
       transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1], delay: 0.15 }}
       className="fixed inset-x-0 top-0 z-50 mix-blend-difference text-white"
     >
@@ -46,7 +49,7 @@ export default function Nav() {
         <motion.ul
           variants={LIST}
           initial="hidden"
-          animate="show"
+          animate={ready ? "show" : "hidden"}
           onMouseLeave={() => setHovered(null)}
           className="hidden items-center gap-9 font-mono text-[11px] uppercase tracking-[0.24em] md:flex"
         >
@@ -68,7 +71,7 @@ export default function Nav() {
         <motion.a
           href="#comprar"
           initial={{ opacity: 0, y: -12 }}
-          animate={{ opacity: 1, y: 0 }}
+          animate={ready ? { opacity: 1, y: 0 } : { opacity: 0, y: -12 }}
           transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1], delay: 0.65 }}
           whileTap={{ scale: 0.94 }}
           className="border border-white px-4 py-2 font-mono text-[11px] uppercase tracking-[0.24em] transition-colors hover:bg-white hover:text-black"

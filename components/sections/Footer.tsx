@@ -1,8 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import SplitLetters from "@/components/motion/SplitLetters";
-import { SlideIn, StaggerGroup, StaggerItem } from "@/components/motion/reveals";
+import SandText from "@/components/motion/SandText";
 
 const COLS = [
   {
@@ -30,25 +29,19 @@ export default function Footer() {
       <div className="hidden lg:block lg:h-[78vh]" aria-hidden="true" />
       <footer className="overflow-hidden border-t border-bone/10 bg-coal px-6 pb-10 pt-20 sm:px-10 lg:fixed lg:inset-x-0 lg:bottom-0 lg:z-0 lg:flex lg:h-[78vh] lg:flex-col lg:justify-center lg:pt-0">
         <div className="mx-auto w-full max-w-7xl">
-          <StaggerGroup
-            className="grid gap-14 md:grid-cols-[1.5fr_1fr_1fr_1fr]"
-            stagger={0.12}
-          >
-            <StaggerItem>
-              <p
-                aria-label="Vetta"
-                className="font-display text-6xl uppercase leading-none text-outline sm:text-8xl"
-              >
-                <SplitLetters text="Vetta" inView stagger={0.07} />
+          <div className="grid gap-14 md:grid-cols-[1.5fr_1fr_1fr_1fr]">
+            <SandText from="left" duration={1.4} grain={180}>
+              <p className="font-display text-6xl uppercase leading-none text-outline sm:text-8xl">
+                Vetta
               </p>
               <p className="mt-5 max-w-xs font-mono text-[11px] uppercase leading-loose tracking-[0.22em] text-bone-dim">
                 Equipo de montaña
                 <br />
                 Diseñado en los Pirineos
               </p>
-            </StaggerItem>
-            {COLS.map((col) => (
-              <StaggerItem key={col.title} from="right">
+            </SandText>
+            {COLS.map((col, i) => (
+              <SandText key={col.title} from="right" delay={0.12 + i * 0.14}>
                 <nav aria-label={col.title}>
                   <p className="mb-5 font-mono text-[11px] uppercase tracking-[0.3em] text-olive">
                     {col.title}
@@ -68,14 +61,14 @@ export default function Footer() {
                     ))}
                   </ul>
                 </nav>
-              </StaggerItem>
+              </SandText>
             ))}
-          </StaggerGroup>
-          <SlideIn from="fade" delay={0.1}>
+          </div>
+          <SandText from="none" delay={0.3} duration={1}>
             <p className="mt-20 border-t border-bone/10 pt-6 font-mono text-[10px] uppercase tracking-[0.22em] text-bone-dim/70">
               © 2026 Vetta Mountain Equipment — Página ficticia de demostración
             </p>
-          </SlideIn>
+          </SandText>
         </div>
       </footer>
     </>

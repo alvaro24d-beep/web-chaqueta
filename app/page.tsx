@@ -1,4 +1,5 @@
 import Nav from "@/components/Nav";
+import Preloader from "@/components/Preloader";
 import BackToTop from "@/components/motion/BackToTop";
 import ScrollProgress from "@/components/motion/ScrollProgress";
 import Hero from "@/components/sections/Hero";
@@ -13,6 +14,7 @@ import Footer from "@/components/sections/Footer";
 export default function Home() {
   return (
     <div id="top">
+      <Preloader />
       <ScrollProgress />
       <Nav />
       {/* El contenido va por encima (z-10) del footer telón (z-0) */}

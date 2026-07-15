@@ -4,11 +4,18 @@ import {
   cubicBezier,
   motion,
   useMotionValueEvent,
+  useReducedMotion,
   useScroll,
   useTransform,
   type MotionValue,
 } from "framer-motion";
-import { createContext, useContext, useRef, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useId,
+  useRef,
+  type ReactNode,
+} from "react";
 
 /**
  * Escena cinematográfica fijada: una sección alta con un contenedor sticky a
@@ -84,10 +91,14 @@ const edgeOffset = (edge: ShotEdge, isExit: boolean) => {
   }
 };
 
+const SAND_SCALE = 120;
+
 /**
  * Plano de una PinScene: visible mientras el progreso está en [from, to].
  * Los planos anclados a 0 o 1 no se funden en ese borde (aparecen/permanecen).
  * Posiciónalo solo con inset/flex en className: x/y/scale los pilota el scroll.
+ * En las rampas de entrada/salida el contenido se compone/descompone en arena
+ * (filtro SVG de desplazamiento por ruido); desactivable con sand={false}.
  */
 export function Shot({
   children,
@@ -95,6 +106,7 @@ export function Shot({
   to,
   enter = "right",
   exit = "left",
+  sand = true,
   className = "",
 }: {
   children: ReactNode;
@@ -102,9 +114,15 @@ export function Shot({
   to: number;
   enter?: ShotEdge;
   exit?: ShotEdge;
+  sand?: boolean;
   className?: string;
 }) {
   const progress = useSceneProgress();
+  const rawId = useId();
+  const filterId = `sand${rawId.replace(/[^a-zA-Z0-9]/g, "")}`;
+  const outerRef = useRef<HTMLDivElement | null>(null);
+  const dispRef = useRef<SVGFEDisplacementMapElement | null>(null);
+  const reduced = useReducedMotion();
   const span = to - from;
   const hasIn = from > 0.001;
   const hasOut = to < 0.999;
@@ -142,11 +160,63 @@ export function Shot({
     v <= 0.001 ? "hidden" : "visible",
   );
 
+  // La arena sigue la misma rampa que la opacidad: granos al entrar/salir,
+  // nítido en el centro del plano. El filtro se aplica a los hijos de
+  // contenido (no al plano entero) para acotar el área a repintar.
+  useMotionValueEvent(opacity, "change", (v) => {
+    if (!sand || reduced) return;
+    const outer = outerRef.current;
+    const disp = dispRef.current;
+    if (!outer || !disp) return;
+    const granular = v > 0.001 && v < 0.999;
+    if (granular) {
+      disp.setAttribute("scale", ((1 - v) * SAND_SCALE).toFixed(1));
+    }
+    for (const child of outer.children) {
+      if (!(child instanceof HTMLElement)) continue;
+      child.style.filter = granular ? `url(#${filterId})` : "none";
+    }
+  });
+
   return (
     <motion.div
+      ref={outerRef}
       style={{ opacity, x, y, scale, visibility }}
       className={`absolute will-change-transform ${className}`}
     >
+      {sand && (
+        <svg
+          aria-hidden="true"
+          width="0"
+          height="0"
+          className="pointer-events-none absolute"
+        >
+          <filter
+            id={filterId}
+            x="-40%"
+            y="-40%"
+            width="180%"
+            height="180%"
+            colorInterpolationFilters="sRGB"
+          >
+            <feTurbulence
+              type="fractalNoise"
+              baseFrequency="0.9"
+              numOctaves="2"
+              seed="7"
+              result="n"
+            />
+            <feDisplacementMap
+              ref={dispRef}
+              in="SourceGraphic"
+              in2="n"
+              scale="0"
+              xChannelSelector="R"
+              yChannelSelector="G"
+            />
+          </filter>
+        </svg>
+      )}
       {children}
     </motion.div>
   );

@@ -1,10 +1,13 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useId, useRef, type ReactNode } from "react";
+import { getFrame, onFrameLoad, preloadSequences } from "@/lib/frameStore";
 
 /**
  * Sección de scrollytelling: un contenedor alto con un lienzo pegajoso (sticky)
  * que reproduce una secuencia de fotogramas en función del progreso de scroll.
+ * Los fotogramas salen de la caché global (lib/frameStore) que el Preloader
+ * llena al arrancar: reproducción siempre a fotograma exacto.
  *
  * Los hijos con data-from / data-to son "pasos" superpuestos que el bucle de
  * animación funde y desplaza según el progreso (ver <SeqStep />). No uses
@@ -24,61 +27,22 @@ type ScrollSequenceProps = {
   children?: ReactNode;
 };
 
-type StepDir = "up" | "left" | "right" | "zoom";
-
 type StepMeta = {
   el: HTMLElement;
   from: number;
   to: number;
   dir: StepDir;
+  /** Nodo feDisplacementMap del filtro de arena del paso (si lo tiene). */
+  disp: SVGFEDisplacementMapElement | null;
+  filterId: string;
+  /** Hijos de contenido a los que se aplica el filtro (excluye el svg). */
+  targets: HTMLElement[];
 };
 
+type StepDir = "up" | "left" | "right" | "zoom";
+
 const BG = "#0c0e09";
-
-function createLoader(urls: string[], onLoad: (i: number) => void) {
-  const imgs: (HTMLImageElement | null)[] = new Array(urls.length).fill(null);
-  let started = false;
-
-  function start() {
-    if (started) return;
-    started = true;
-    // Primero el fotograma 0, luego una pasada gruesa (1 de cada 6) para tener
-    // cobertura temprana en toda la línea de tiempo, y por último el resto.
-    const order: number[] = [0];
-    for (let i = 6; i < urls.length; i += 6) order.push(i);
-    for (let i = 0; i < urls.length; i++) if (i % 6 !== 0) order.push(i);
-
-    let cursor = 0;
-    const CONCURRENCY = 10;
-    const next = () => {
-      if (cursor >= order.length) return;
-      const idx = order[cursor++];
-      const img = new Image();
-      img.decoding = "async";
-      img.onload = () => {
-        imgs[idx] = img;
-        onLoad(idx);
-        next();
-      };
-      img.onerror = () => next();
-      img.src = urls[idx];
-    };
-    for (let k = 0; k < CONCURRENCY; k++) next();
-  }
-
-  function nearest(i: number): HTMLImageElement | null {
-    if (imgs[i]) return imgs[i];
-    for (let d = 1; d < urls.length; d++) {
-      const lo = i - d;
-      const hi = i + d;
-      if (lo >= 0 && imgs[lo]) return imgs[lo];
-      if (hi < urls.length && imgs[hi]) return imgs[hi];
-    }
-    return null;
-  }
-
-  return { start, nearest };
-}
+const SAND_SCALE = 130;
 
 const smooth = (t: number) => t * t * (3 - 2 * t);
 
@@ -113,11 +77,33 @@ export default function ScrollSequence({
     let raf = 0;
     let active = false;
 
+    const reducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+
     const desiredFrame = () =>
       Math.min(n - 1, Math.max(0, Math.round(frameProgress * (n - 1))));
 
+    const nearest = (i: number): HTMLImageElement | null => {
+      const exact = getFrame(frames[i]);
+      if (exact) return exact;
+      for (let d = 1; d < n; d++) {
+        const lo = i - d;
+        const hi = i + d;
+        if (lo >= 0) {
+          const img = getFrame(frames[lo]);
+          if (img) return img;
+        }
+        if (hi < n) {
+          const img = getFrame(frames[hi]);
+          if (img) return img;
+        }
+      }
+      return null;
+    };
+
     const draw = (force = false) => {
-      const img = loader.nearest(desiredFrame());
+      const img = nearest(desiredFrame());
       if (!img || (!force && img === lastImg)) return;
       lastImg = img;
       ctx.fillStyle = BG;
@@ -130,10 +116,8 @@ export default function ScrollSequence({
       ctx.drawImage(img, (width - dw) * focusX, (height - dh) * 0.5, dw, dh);
     };
 
-    const loader = createLoader(frames, (i) => {
-      // Repinta en cuanto llega el fotograma deseado (o el primero disponible).
-      if (lastImg === null || i === desiredFrame()) draw(true);
-    });
+    // Repinta cuando llegan fotogramas nuevos de la caché global.
+    const unsubscribe = onFrameLoad(() => draw(lastImg === null));
 
     const steps: StepMeta[] = Array.from(
       sticky.querySelectorAll<HTMLElement>("[data-from]"),
@@ -142,6 +126,11 @@ export default function ScrollSequence({
       from: parseFloat(el.dataset.from ?? "0"),
       to: parseFloat(el.dataset.to ?? "1"),
       dir: (el.dataset.dir ?? "up") as StepDir,
+      disp: el.querySelector<SVGFEDisplacementMapElement>("feDisplacementMap"),
+      filterId: el.dataset.sandId ?? "",
+      targets: Array.from(el.children).filter(
+        (c): c is HTMLElement => c instanceof HTMLElement,
+      ),
     }));
 
     const updateSteps = () => {
@@ -175,6 +164,21 @@ export default function ScrollSequence({
         s.el.style.opacity = opacity.toFixed(3);
         s.el.style.transform = `translate3d(${x.toFixed(2)}px, ${y.toFixed(2)}px, 0) scale(${sc.toFixed(4)})`;
         s.el.style.visibility = opacity === 0 ? "hidden" : "visible";
+
+        // Arena: el contenido se disgrega en granos en las rampas de
+        // entrada/salida (filtro SVG de desplazamiento por ruido).
+        if (s.disp && !reducedMotion) {
+          const granular = opacity > 0.001 && opacity < 0.999;
+          if (granular) {
+            s.disp.setAttribute(
+              "scale",
+              ((1 - opacity) * SAND_SCALE).toFixed(1),
+            );
+          }
+          for (const target of s.targets) {
+            target.style.filter = granular ? `url(#${s.filterId})` : "none";
+          }
+        }
       }
     };
 
@@ -218,11 +222,11 @@ export default function ScrollSequence({
     const ro = new ResizeObserver(resize);
     ro.observe(sticky);
 
-    // Precarga cuando la sección se acerca (1.5 pantallas de margen).
+    // Refuerzo por si se llega con ancla directa sin pasar por el Preloader.
     const ioLoad = new IntersectionObserver(
       (entries) => {
         if (entries.some((e) => e.isIntersecting)) {
-          loader.start();
+          preloadSequences([frames]);
           ioLoad.disconnect();
         }
       },
@@ -253,6 +257,7 @@ export default function ScrollSequence({
     return () => {
       active = false;
       cancelAnimationFrame(raf);
+      unsubscribe();
       ro.disconnect();
       ioLoad.disconnect();
       ioActive.disconnect();
@@ -285,6 +290,7 @@ export default function ScrollSequence({
  * className (nunca con utilidades translate-*: el transform lo pilota JS).
  * `dir` marca la coreografía: "left"/"right" cruzan la pantalla, "zoom"
  * acerca el plano a cámara, "up" es el desplazamiento vertical clásico.
+ * El contenido se compone/descompone en arena en las rampas de entrada/salida.
  */
 export function SeqStep({
   from,
@@ -295,18 +301,52 @@ export function SeqStep({
 }: {
   from: number;
   to: number;
-  dir?: "up" | "left" | "right" | "zoom";
+  dir?: StepDir;
   className?: string;
   children: ReactNode;
 }) {
+  const rawId = useId();
+  const filterId = `sand${rawId.replace(/[^a-zA-Z0-9]/g, "")}`;
+
   return (
     <div
       data-from={from}
       data-to={to}
       data-dir={dir}
+      data-sand-id={filterId}
       style={{ opacity: 0, visibility: "hidden" }}
       className={`absolute will-change-transform ${className}`}
     >
+      <svg
+        aria-hidden="true"
+        width="0"
+        height="0"
+        className="pointer-events-none absolute"
+      >
+        <filter
+          id={filterId}
+          x="-40%"
+          y="-40%"
+          width="180%"
+          height="180%"
+          colorInterpolationFilters="sRGB"
+        >
+          <feTurbulence
+            type="fractalNoise"
+            baseFrequency="0.9"
+            numOctaves="2"
+            seed="7"
+            result="n"
+          />
+          <feDisplacementMap
+            in="SourceGraphic"
+            in2="n"
+            scale="0"
+            xChannelSelector="R"
+            yChannelSelector="G"
+          />
+        </filter>
+      </svg>
       {children}
     </div>
   );

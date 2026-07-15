@@ -38,3 +38,11 @@ export const SEQ_EPICO = frameUrls("Desde abajo epico", [
 export const VIDEO_SENDERISTA = `/Videos/${encodeURIComponent(
   "senderista en montaña.MP4",
 )}`;
+
+/** Todas las secuencias en orden de aparición (prioridad de precarga). */
+export const ALL_SEQUENCES = [
+  SEQ_ANDANDO,
+  SEQ_CREMALLERA,
+  SEQ_CIRCULO,
+  SEQ_EPICO,
+];

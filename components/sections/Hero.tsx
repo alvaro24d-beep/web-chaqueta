@@ -1,6 +1,5 @@
 import ScrollSequence, { SeqStep } from "@/components/ScrollSequence";
-import SplitLetters from "@/components/motion/SplitLetters";
-import { SlideIn } from "@/components/motion/reveals";
+import SandText from "@/components/motion/SandText";
 import { SEQ_ANDANDO } from "@/lib/frames";
 
 export default function Hero() {
@@ -17,28 +16,22 @@ export default function Hero() {
         dir="zoom"
         className="inset-0 flex flex-col items-center justify-center px-6 text-center"
       >
-        <SlideIn from="fade" delay={0.25}>
+        <SandText mode="mount" from="none" delay={0.15} duration={0.9}>
           <p className="mb-6 font-mono text-[11px] uppercase tracking-[0.35em] text-olive sm:text-xs">
             Vetta · Equipo de montaña
           </p>
-        </SlideIn>
-        <h1
-          aria-label="Stratum 3L"
-          className="font-display uppercase leading-[0.85] text-[clamp(4.2rem,16vw,14rem)]"
-        >
-          <SplitLetters text="Stratum" delay={0.45} />
-          <SplitLetters
-            text={" 3L"}
-            className="text-outline"
-            delay={0.85}
-          />
-        </h1>
-        <SlideIn from="fade" delay={1.15}>
+        </SandText>
+        <SandText mode="mount" from="none" delay={0.4} duration={1.7} grain={230}>
+          <h1 className="font-display uppercase leading-[0.85] text-[clamp(4.2rem,16vw,14rem)]">
+            Stratum<span className="text-outline">&nbsp;3L</span>
+          </h1>
+        </SandText>
+        <SandText mode="mount" from="none" delay={1.2} duration={1}>
           <p className="mt-7 max-w-xl text-balance text-base text-bone-dim sm:text-lg">
             La shell de tres capas para quienes no consultan el parte antes de
             decidir si salen.
           </p>
-        </SlideIn>
+        </SandText>
       </SeqStep>
 
       <SeqStep
@@ -47,12 +40,18 @@ export default function Hero() {
         dir="zoom"
         className="inset-x-0 bottom-7 flex flex-col items-center gap-3"
       >
-        <SlideIn from="fade" delay={1.5} className="flex flex-col items-center gap-3">
+        <SandText
+          mode="mount"
+          from="none"
+          delay={1.7}
+          duration={0.9}
+          innerClassName="flex flex-col items-center gap-3"
+        >
           <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-bone-dim">
             Desliza
           </span>
           <span className="scroll-cue" />
-        </SlideIn>
+        </SandText>
       </SeqStep>
 
       <SeqStep

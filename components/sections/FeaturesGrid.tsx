@@ -2,6 +2,7 @@
 
 import { motion, useScroll, useTransform } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
+import SandText from "@/components/motion/SandText";
 import TiltCard from "@/components/motion/TiltCard";
 
 const FEATURES = [
@@ -84,19 +85,21 @@ export default function FeaturesGrid() {
           className="flex w-max items-stretch gap-6 px-6 sm:gap-10 sm:px-16"
         >
           <div className="flex w-[82vw] shrink-0 flex-col justify-center sm:w-[46vw]">
-            <p className="mb-5 font-mono text-[11px] uppercase tracking-[0.3em] text-moss">
-              Sin adornos — solo ingeniería
-            </p>
-            <h2 className="font-display uppercase leading-[0.88] text-[clamp(3rem,7.5vw,7rem)]">
-              Pro <span className="text-outline-dark">de serie</span>
-            </h2>
-            <p className="mt-8 max-w-md text-lg leading-relaxed text-coal/70">
-              Nada de versiones «pro» que cuestan aparte. Cada STRATUM 3L sale
-              de fábrica con todo lo que la montaña va a pedirle.
-            </p>
-            <p className="mt-10 font-mono text-[11px] uppercase tracking-[0.3em] text-ember">
-              Sigue deslizando — la escena avanza en horizontal →
-            </p>
+            <SandText from="left" duration={1.3}>
+              <p className="mb-5 font-mono text-[11px] uppercase tracking-[0.3em] text-moss">
+                Sin adornos — solo ingeniería
+              </p>
+              <h2 className="font-display uppercase leading-[0.88] text-[clamp(3rem,7.5vw,7rem)]">
+                Pro <span className="text-outline-dark">de serie</span>
+              </h2>
+              <p className="mt-8 max-w-md text-lg leading-relaxed text-coal/70">
+                Nada de versiones «pro» que cuestan aparte. Cada STRATUM 3L
+                sale de fábrica con todo lo que la montaña va a pedirle.
+              </p>
+              <p className="mt-10 font-mono text-[11px] uppercase tracking-[0.3em] text-ember">
+                Sigue deslizando — la escena avanza en horizontal →
+              </p>
+            </SandText>
           </div>
 
           {FEATURES.map((f) => (
@@ -105,17 +108,23 @@ export default function FeaturesGrid() {
               className="group w-[74vw] shrink-0 border border-coal/15 bg-bone sm:w-[42vw] lg:w-[30vw]"
             >
               <TiltCard className="h-full">
-                <div className="flex h-full min-h-[52vh] flex-col p-8 transition-colors duration-500 group-hover:bg-coal group-hover:text-bone sm:p-10">
-                  <p className="font-display text-6xl leading-none text-coal/15 transition-colors duration-500 group-hover:text-ember sm:text-7xl">
-                    {f.index}
-                  </p>
-                  <h3 className="mb-3 mt-auto font-display text-2xl uppercase tracking-wide sm:text-3xl">
-                    {f.title}
-                  </h3>
-                  <p className="text-sm leading-relaxed text-coal/65 transition-colors duration-500 group-hover:text-bone/70 sm:text-base">
-                    {f.body}
-                  </p>
-                </div>
+                <SandText
+                  from="right"
+                  className="h-full"
+                  innerClassName="h-full"
+                >
+                  <div className="flex h-full min-h-[52vh] flex-col p-8 transition-colors duration-500 group-hover:bg-coal group-hover:text-bone sm:p-10">
+                    <p className="font-display text-6xl leading-none text-coal/15 transition-colors duration-500 group-hover:text-ember sm:text-7xl">
+                      {f.index}
+                    </p>
+                    <h3 className="mb-3 mt-auto font-display text-2xl uppercase tracking-wide sm:text-3xl">
+                      {f.title}
+                    </h3>
+                    <p className="text-sm leading-relaxed text-coal/65 transition-colors duration-500 group-hover:text-bone/70 sm:text-base">
+                      {f.body}
+                    </p>
+                  </div>
+                </SandText>
               </TiltCard>
             </div>
           ))}
