@@ -78,11 +78,24 @@ export function onFrameLoad(fn: Listener) {
 
 const isComplete = () => totalCount > 0 && loadedCount >= totalCount;
 
-/** true cuando todos los fotogramas encolados han terminado (hook reactivo). */
-export function usePreloadComplete() {
+let released = false;
+
+/** El Preloader suelta la página (por carga completa O por failsafe). */
+export function releasePage() {
+  if (released) return;
+  released = true;
+  notify();
+}
+
+/**
+ * true cuando la página está liberada: precarga completa o failsafe del
+ * Preloader. Las animaciones de arranque deben esperar a esto — nunca a
+ * "todo cargado" a secas, o en conexiones lentas no se dispararían jamás.
+ */
+export function usePageReady() {
   return useSyncExternalStore(
     (cb) => onFrameLoad(cb),
-    isComplete,
+    () => released || isComplete(),
     () => false,
   );
 }

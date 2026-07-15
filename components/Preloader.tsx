@@ -2,7 +2,12 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState } from "react";
-import { frameProgress, onFrameLoad, preloadSequences } from "@/lib/frameStore";
+import {
+  frameProgress,
+  onFrameLoad,
+  preloadSequences,
+  releasePage,
+} from "@/lib/frameStore";
 import { ALL_SEQUENCES } from "@/lib/frames";
 
 /**
@@ -21,13 +26,21 @@ export default function Preloader() {
       const { loaded, total } = frameProgress();
       const p = total > 0 ? loaded / total : 1;
       setPct(Math.round(p * 100));
-      if (total > 0 && loaded >= total) setDone(true);
+      if (total > 0 && loaded >= total) {
+        setDone(true);
+        releasePage();
+      }
     };
     update();
     const unsubscribe = onFrameLoad(update);
 
     // Red de seguridad: si algo se atasca, no dejamos la web bloqueada.
-    const failsafe = setTimeout(() => setDone(true), 60000);
+    // releasePage() también aquí: las animaciones gateadas (nav, hero) deben
+    // dispararse igualmente o la página quedaría sin cabecera ni titular.
+    const failsafe = setTimeout(() => {
+      setDone(true);
+      releasePage();
+    }, 60000);
     return () => {
       unsubscribe();
       clearTimeout(failsafe);

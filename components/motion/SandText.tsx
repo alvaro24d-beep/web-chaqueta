@@ -8,7 +8,7 @@ import {
   useReducedMotion,
 } from "framer-motion";
 import { useEffect, useId, useRef, type ReactNode } from "react";
-import { usePreloadComplete } from "@/lib/frameStore";
+import { usePageReady } from "@/lib/frameStore";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
@@ -46,7 +46,7 @@ export default function SandText({
   const dispRef = useRef<SVGFEDisplacementMapElement | null>(null);
   const p = useMotionValue(0);
   const reduced = useReducedMotion();
-  const ready = usePreloadComplete();
+  const ready = usePageReady();
 
   const inView = useInView(outerRef, {
     once: true,

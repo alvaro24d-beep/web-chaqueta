@@ -2,7 +2,7 @@
 
 import { motion, type Variants } from "framer-motion";
 import { useState } from "react";
-import { usePreloadComplete } from "@/lib/frameStore";
+import { usePageReady } from "@/lib/frameStore";
 
 const LINKS = [
   { href: "#detalles", label: "Detalles" },
@@ -28,7 +28,7 @@ const ITEM: Variants = {
 export default function Nav() {
   const [hovered, setHovered] = useState<string | null>(null);
   // La entrada espera a que el Preloader suelte la página.
-  const ready = usePreloadComplete();
+  const ready = usePageReady();
 
   return (
     <motion.header

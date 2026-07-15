@@ -4,6 +4,7 @@ import { motion, useScroll, useTransform } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import SandText from "@/components/motion/SandText";
 import TiltCard from "@/components/motion/TiltCard";
+import { useSceneHeightVh } from "@/lib/useSceneHeight";
 
 const FEATURES = [
   {
@@ -46,6 +47,7 @@ export default function FeaturesGrid() {
   const sectionRef = useRef<HTMLElement | null>(null);
   const trackRef = useRef<HTMLDivElement | null>(null);
   const [maxShift, setMaxShift] = useState(0);
+  const effectiveVh = useSceneHeightVh(340);
 
   const { scrollYProgress } = useScroll({
     target: sectionRef,
@@ -76,7 +78,7 @@ export default function FeaturesGrid() {
       id="pro"
       aria-label="Características pro"
       className="relative bg-bone text-coal"
-      style={{ height: "340vh" }}
+      style={{ height: `${effectiveVh}vh` }}
     >
       <div className="sticky top-0 flex h-screen flex-col justify-center overflow-hidden">
         <motion.div

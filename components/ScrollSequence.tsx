@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, type ReactNode } from "react";
 import { getFrame, onFrameLoad, preloadSequences } from "@/lib/frameStore";
+import { useSceneHeightVh } from "@/lib/useSceneHeight";
 
 /**
  * Sección de scrollytelling: un contenedor alto con un lienzo pegajoso (sticky)
@@ -37,14 +38,29 @@ type StepMeta = {
   filterId: string;
   /** Hijos de contenido a los que se aplica el filtro (excluye el svg). */
   targets: HTMLElement[];
+  /** Animación temporal 0..1 (las entradas/salidas se reproducen enteras). */
+  anim: number;
+  target: number;
+  vec: { x: number; y: number; s: number };
 };
 
 type StepDir = "up" | "left" | "right" | "zoom";
 
 const BG = "#0c0e09";
 const SAND_SCALE = 130;
+const ENTER_MS = 850;
+const EXIT_MS = 600;
 
-const smooth = (t: number) => t * t * (3 - 2 * t);
+const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
+
+/** Offset del paso en el borde de entrada ("start") o de salida ("end"). */
+const vecFor = (dir: StepDir, edge: "start" | "end") => {
+  if (dir === "left") return { x: edge === "start" ? -110 : 110, y: 0, s: 1 };
+  if (dir === "right") return { x: edge === "start" ? 110 : -110, y: 0, s: 1 };
+  if (dir === "zoom")
+    return { x: 0, y: 0, s: edge === "start" ? 0.86 : 1.09 };
+  return { x: 0, y: edge === "start" ? 32 : -32, s: 1 };
+};
 
 export default function ScrollSequence({
   frames,
@@ -58,6 +74,7 @@ export default function ScrollSequence({
   const sectionRef = useRef<HTMLElement | null>(null);
   const stickyRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const effectiveVh = useSceneHeightVh(heightVh);
 
   useEffect(() => {
     const section = sectionRef.current;
@@ -131,49 +148,50 @@ export default function ScrollSequence({
       targets: Array.from(el.children).filter(
         (c): c is HTMLElement => c instanceof HTMLElement,
       ),
+      anim: 0,
+      target: 0,
+      vec: vecFor((el.dataset.dir ?? "up") as StepDir, "start"),
     }));
 
-    const updateSteps = () => {
+    // Entradas/salidas disparadas por umbral y reproducidas ENTERAS en el
+    // tiempo (no ligadas al progreso): aunque el scroll sea rápido o se pare
+    // a mitad, la animación del texto siempre se completa.
+    const updateSteps = (dt: number) => {
       for (const s of steps) {
-        const t = (progress - s.from) / (s.to - s.from);
-        let opacity = 0;
-        let x = 0;
-        let y = 0;
-        let sc = 1;
-        if (t >= 0 && t <= 1) {
-          // Rampas de entrada/salida en el 25% de cada extremo del rango.
-          // Los pasos anclados al inicio (from<=0) o al final (to>=1) de la
-          // sección no se funden en ese borde: aparecen/permanecen fijos.
-          const rampIn = s.from <= 0.001 ? 1 : Math.min(1, t / 0.25);
-          const rampOut = s.to >= 0.999 ? 1 : Math.min(1, (1 - t) / 0.25);
-          opacity = smooth(Math.min(rampIn, rampOut));
-          const inD = 1 - rampIn;
-          const outD = 1 - rampOut;
-          // "left"/"right" cruzan la pantalla (entran por un lado y salen por
-          // el contrario); "zoom" viene de lejos y sale hacia cámara.
-          if (s.dir === "left") x = -inD * 110 + outD * 110;
-          else if (s.dir === "right") x = inD * 110 - outD * 110;
-          else if (s.dir === "zoom") sc = 1 - inD * 0.14 + outD * 0.09;
-          else y = inD * 32 - outD * 32;
-        } else {
-          if (s.dir === "left") x = t < 0 ? -110 : 110;
-          else if (s.dir === "right") x = t < 0 ? 110 : -110;
-          else if (s.dir === "zoom") sc = t < 0 ? 0.86 : 1.09;
-          else y = t < 0 ? 32 : -32;
+        const inRange = progress >= s.from && progress <= s.to;
+        const target = inRange ? 1 : 0;
+        if (target !== s.target) {
+          s.target = target;
+          // Lado por el que entra/sale según el borde del rango cruzado.
+          const edge =
+            progress < (s.from + s.to) / 2 ? ("start" as const) : ("end" as const);
+          s.vec = vecFor(s.dir, edge);
+          // Bordes anclados al inicio/fin de la sección: sin animación.
+          const anchored =
+            edge === "start" ? s.from <= 0.001 : s.to >= 0.999;
+          if (anchored) s.anim = target;
         }
-        s.el.style.opacity = opacity.toFixed(3);
+        if (s.anim !== s.target) {
+          const dur = s.target === 1 ? ENTER_MS : EXIT_MS;
+          s.anim = Math.min(
+            1,
+            Math.max(0, s.anim + ((s.target === 1 ? 1 : -1) * dt) / dur),
+          );
+        }
+        const e = easeOut(s.anim);
+        const x = s.vec.x * (1 - e);
+        const y = s.vec.y * (1 - e);
+        const sc = 1 + (s.vec.s - 1) * (1 - e);
+        s.el.style.opacity = e.toFixed(3);
         s.el.style.transform = `translate3d(${x.toFixed(2)}px, ${y.toFixed(2)}px, 0) scale(${sc.toFixed(4)})`;
-        s.el.style.visibility = opacity === 0 ? "hidden" : "visible";
+        s.el.style.visibility = e <= 0.001 ? "hidden" : "visible";
 
-        // Arena: el contenido se disgrega en granos en las rampas de
-        // entrada/salida (filtro SVG de desplazamiento por ruido).
+        // Arena: el contenido se disgrega en granos mientras la animación
+        // está en curso (filtro SVG de desplazamiento por ruido).
         if (s.disp && !reducedMotion) {
-          const granular = opacity > 0.001 && opacity < 0.999;
+          const granular = e > 0.001 && e < 0.999;
           if (granular) {
-            s.disp.setAttribute(
-              "scale",
-              ((1 - opacity) * SAND_SCALE).toFixed(1),
-            );
+            s.disp.setAttribute("scale", ((1 - e) * SAND_SCALE).toFixed(1));
           }
           for (const target of s.targets) {
             target.style.filter = granular ? `url(#${s.filterId})` : "none";
@@ -194,11 +212,15 @@ export default function ScrollSequence({
         span > 0 ? Math.min(1, Math.max(0, (preRoll - rect.top) / span)) : 0;
     };
 
+    let lastT = performance.now();
     const tick = () => {
       if (!active) return;
+      const now = performance.now();
+      const dt = Math.min(64, now - lastT);
+      lastT = now;
       measure();
       draw();
-      updateSteps();
+      updateSteps(dt);
       raf = requestAnimationFrame(tick);
     };
 
@@ -240,6 +262,7 @@ export default function ScrollSequence({
         const isNear = entries.some((e) => e.isIntersecting);
         if (isNear && !active) {
           active = true;
+          lastT = performance.now();
           raf = requestAnimationFrame(tick);
         } else if (!isNear && active) {
           active = false;
@@ -252,7 +275,7 @@ export default function ScrollSequence({
 
     resize();
     measure();
-    updateSteps();
+    updateSteps(16);
 
     return () => {
       active = false;
@@ -270,7 +293,7 @@ export default function ScrollSequence({
       id={id}
       aria-label={ariaLabel}
       className={`relative ${className}`}
-      style={{ height: `${heightVh}vh` }}
+      style={{ height: `${effectiveVh}vh` }}
     >
       <div ref={stickyRef} className="sticky top-0 h-screen overflow-hidden">
         <canvas

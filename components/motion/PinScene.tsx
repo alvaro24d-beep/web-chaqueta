@@ -1,21 +1,26 @@
 "use client";
 
 import {
+  animate,
   cubicBezier,
   motion,
+  useMotionValue,
   useMotionValueEvent,
   useReducedMotion,
   useScroll,
   useTransform,
+  type AnimationPlaybackControls,
   type MotionValue,
 } from "framer-motion";
 import {
   createContext,
   useContext,
+  useEffect,
   useId,
   useRef,
   type ReactNode,
 } from "react";
+import { useSceneHeightVh } from "@/lib/useSceneHeight";
 
 /**
  * Escena cinematográfica fijada: una sección alta con un contenedor sticky a
@@ -48,6 +53,7 @@ export function PinScene({
   ariaLabel?: string;
 }) {
   const ref = useRef<HTMLElement | null>(null);
+  const effectiveVh = useSceneHeightVh(heightVh);
   const { scrollYProgress } = useScroll({
     target: ref,
     offset: ["start start", "end end"],
@@ -59,7 +65,7 @@ export function PinScene({
       id={id}
       aria-label={ariaLabel}
       className={`relative ${className}`}
-      style={{ height: `${heightVh}vh` }}
+      style={{ height: `${effectiveVh}vh` }}
     >
       <div className="sticky top-0 h-screen overflow-hidden">
         <SceneCtx.Provider value={scrollYProgress}>{children}</SceneCtx.Provider>
@@ -95,10 +101,11 @@ const SAND_SCALE = 120;
 
 /**
  * Plano de una PinScene: visible mientras el progreso está en [from, to].
- * Los planos anclados a 0 o 1 no se funden en ese borde (aparecen/permanecen).
- * Posiciónalo solo con inset/flex en className: x/y/scale los pilota el scroll.
- * En las rampas de entrada/salida el contenido se compone/descompone en arena
- * (filtro SVG de desplazamiento por ruido); desactivable con sand={false}.
+ * Al cruzar un umbral, la entrada/salida se reproduce ENTERA en el tiempo
+ * (no ligada al scroll): aunque el usuario pare o vaya rápido, la animación
+ * siempre se completa. El contenido se compone/descompone en arena (filtro
+ * SVG de desplazamiento por ruido); desactivable con sand={false}.
+ * Posiciónalo solo con inset/flex en className: x/y/scale los pilota el plano.
  */
 export function Shot({
   children,
@@ -123,47 +130,23 @@ export function Shot({
   const outerRef = useRef<HTMLDivElement | null>(null);
   const dispRef = useRef<SVGFEDisplacementMapElement | null>(null);
   const reduced = useReducedMotion();
-  const span = to - from;
-  const hasIn = from > 0.001;
-  const hasOut = to < 0.999;
-  // Rampas del 30% del rango en cada extremo (epsilon si el borde es fijo:
-  // los puntos de useTransform deben ser estrictamente crecientes).
-  const frames = [
-    from,
-    hasIn ? from + span * 0.3 : from + 0.0001,
-    hasOut ? to - span * 0.3 : to - 0.0001,
-    to,
-  ];
 
-  const enterO = hasIn ? edgeOffset(enter, false) : { x: 0, y: 0, scale: 1 };
-  const exitO = hasOut ? edgeOffset(exit, true) : { x: 0, y: 0, scale: 1 };
+  const opacity = useMotionValue(0);
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+  const scale = useMotionValue(1);
+  /** 0 = arena suelta · 1 = texto compuesto. */
+  const compose = useMotionValue(0);
+  const activeRef = useRef<boolean | null>(null);
+  const controlsRef = useRef<AnimationPlaybackControls[]>([]);
 
-  const opacity = useTransform(progress, frames, [
-    hasIn ? 0 : 1,
-    1,
-    1,
-    hasOut ? 0 : 1,
-  ]);
-  const x = useTransform(progress, frames, [enterO.x, 0, 0, exitO.x], {
-    ease: EASE,
-  });
-  const y = useTransform(progress, frames, [enterO.y, 0, 0, exitO.y], {
-    ease: EASE,
-  });
-  const scale = useTransform(
-    progress,
-    frames,
-    [enterO.scale, 1, 1, exitO.scale],
-    { ease: EASE },
-  );
   const visibility = useTransform(opacity, (v) =>
     v <= 0.001 ? "hidden" : "visible",
   );
 
-  // La arena sigue la misma rampa que la opacidad: granos al entrar/salir,
-  // nítido en el centro del plano. El filtro se aplica a los hijos de
-  // contenido (no al plano entero) para acotar el área a repintar.
-  useMotionValueEvent(opacity, "change", (v) => {
+  // La arena sigue a la animación de composición. El filtro se aplica a los
+  // hijos de contenido (no al plano entero) para acotar el área a repintar.
+  useMotionValueEvent(compose, "change", (v) => {
     if (!sand || reduced) return;
     const outer = outerRef.current;
     const disp = dispRef.current;
@@ -177,6 +160,52 @@ export function Shot({
       child.style.filter = granular ? `url(#${filterId})` : "none";
     }
   });
+
+  useEffect(() => {
+    const apply = (p: number, initial: boolean) => {
+      const inRange = p >= from && p <= to;
+      if (inRange === activeRef.current) return;
+      activeRef.current = inRange;
+
+      // Lado del borde cruzado: entrando/saliendo por el inicio del rango se
+      // usa el lado de entrada; por el final, el de salida.
+      const edge = p < (from + to) / 2 ? enter : exit;
+      const off = edgeOffset(edge, edge === exit);
+
+      controlsRef.current.forEach((c) => c.stop());
+
+      if (initial || reduced) {
+        opacity.set(inRange ? 1 : 0);
+        x.set(inRange ? 0 : off.x);
+        y.set(inRange ? 0 : off.y);
+        scale.set(inRange ? 1 : off.scale);
+        compose.set(inRange ? 1 : 0);
+        return;
+      }
+
+      const t = { duration: inRange ? 0.9 : 0.65, ease: EASE };
+      if (inRange && opacity.get() <= 0.01) {
+        // Parte del lado por el que entra.
+        x.set(off.x);
+        y.set(off.y);
+        scale.set(off.scale);
+      }
+      controlsRef.current = [
+        animate(opacity, inRange ? 1 : 0, t),
+        animate(x, inRange ? 0 : off.x, t),
+        animate(y, inRange ? 0 : off.y, t),
+        animate(scale, inRange ? 1 : off.scale, t),
+        animate(compose, inRange ? 1 : 0, t),
+      ];
+    };
+
+    apply(progress.get(), true);
+    const unsubscribe = progress.on("change", (p) => apply(p, false));
+    return () => {
+      unsubscribe();
+      controlsRef.current.forEach((c) => c.stop());
+    };
+  }, [from, to, enter, exit, reduced, progress, opacity, x, y, scale, compose]);
 
   return (
     <motion.div
