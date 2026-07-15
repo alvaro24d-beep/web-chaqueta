@@ -84,28 +84,39 @@ export default function SectionDivider({ fill }: { fill: string }) {
     let boundary = 0;
     let raf = 0;
     let active = false;
+    // Altura suavizada por columna: cada una persigue su objetivo con
+    // inercia (~240ms) — sin esto, muestrear el ruido por frame hace que
+    // todas las columnas salten a 60Hz (parpadeo).
+    let cols: Float32Array = new Float32Array(0);
+    let lastT = 0;
 
-    const render = (now: number) => {
+    const render = (now: number, snap = false) => {
+      const dt = Math.min(64, Math.max(0, now - lastT));
+      lastT = now;
       ctx.clearRect(0, 0, W, H);
       const v = Math.abs(smoothVelocity.get());
       const amp = (26 + Math.min(30, v * 0.04)) * dpr;
-      const drift = (now / 1000) * 80;
+      const drift = (now / 1000) * 13;
       const slice = Math.max(2, Math.round(4 * dpr));
       const mid1 = MID1 * dpr;
       const mid2 = MID2 * dpr;
+      const ease = snap ? 1 : 1 - Math.exp(-dt / 240);
+      const numCols = Math.ceil(W / slice);
+      if (cols.length !== numCols) cols = new Float32Array(numCols);
       // Escala del canvas fuente: píxeles internos por px CSS.
       const srcScale =
         mat && mat.clientWidth > 0 ? mat.width / mat.clientWidth : 1;
       const toSrc = srcScale / dpr;
 
-      for (let x = 0; x < W; x += slice) {
-        const u = (Math.round(x / dpr) + Math.round(drift)) & (N - 1);
+      for (let i = 0; i < numCols; i++) {
+        const x = i * slice;
+        const u = Math.round(x / dpr + drift) & (N - 1);
         const n =
-          (0.62 * NOISE_BIG[u] +
-            0.38 * NOISE_FINE[(u * 5 + 700) & (N - 1)] +
-            1) /
+          (0.7 * NOISE_BIG[u] + 0.3 * NOISE_FINE[(u * 3 + 700) & (N - 1)] + 1) /
           2;
-        const r = Math.max(2 * dpr, n * amp);
+        const target = Math.max(2 * dpr, n * amp);
+        cols[i] += (target - cols[i]) * ease;
+        const r = cols[i];
         const r2 = r * 0.45;
 
         if (mat) {
@@ -152,18 +163,21 @@ export default function SectionDivider({ fill }: { fill: string }) {
           ctx.fillRect(x, boundary - r, slice, H - boundary + r);
         }
 
-        // Punta ember: energía rota coronando la columna
-        ctx.globalAlpha = 0.35 + n * 0.55;
+        // Punta ember: energía rota coronando la columna (alpha estable,
+        // ligado a la altura suavizada — nada de titileo por frame)
+        ctx.globalAlpha = 0.3 + Math.min(0.55, (r / (56 * dpr)) * 0.55);
         ctx.fillStyle = "#ff5b1f";
         ctx.fillRect(x, boundary - r - 1.6 * dpr, slice, 1.6 * dpr);
         ctx.globalAlpha = 1;
 
-        // Esquirlas: fragmentos de la misma materia desprendiéndose
-        if ((u & 3) === 0) {
-          const f = NOISE_FINE[(u * 11 + 90) & (N - 1)];
-          const lift = r + 8 * dpr + Math.abs(f) * 34 * dpr;
+        // Esquirlas: ancladas a columnas FIJAS (no derivan con el ruido) y
+        // flotando con un vaivén lento — nada de aparecer/desaparecer.
+        if ((i & 7) === 0) {
+          const f = NOISE_FINE[(i * 29 + 90) & (N - 1)];
+          const bob = Math.sin(now / 900 + i * 1.7) * 4 * dpr;
+          const lift = r + 10 * dpr + Math.abs(f) * 30 * dpr + bob;
           const sz = (1.5 + Math.abs(f) * 3) * dpr;
-          ctx.globalAlpha = 0.65 * (1 - Math.abs(f) * 0.6);
+          ctx.globalAlpha = 0.55 * (1 - Math.abs(f) * 0.5);
           if (mat && f > -0.3) {
             ctx.drawImage(
               mat,
@@ -194,7 +208,7 @@ export default function SectionDivider({ fill }: { fill: string }) {
       boundary = ABOVE * dpr;
       canvas.width = W;
       canvas.height = H;
-      render(reducedQuery ? 4000 : performance.now());
+      render(reducedQuery ? 4000 : performance.now(), true);
     };
 
     const tick = (now: number) => {
