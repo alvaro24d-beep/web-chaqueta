@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, type ReactNode } from "react";
+import SandFilter from "@/components/motion/SandFilter";
 import { getFrame, onFrameLoad, preloadSequences } from "@/lib/frameStore";
 import { useSceneHeightVh } from "@/lib/useSceneHeight";
 
@@ -33,8 +34,10 @@ type StepMeta = {
   from: number;
   to: number;
   dir: StepDir;
-  /** Nodo feDisplacementMap del filtro de arena del paso (si lo tiene). */
+  /** Nodos del filtro de arena del paso (si los tiene). */
   disp: SVGFEDisplacementMapElement | null;
+  blur: SVGFEGaussianBlurElement | null;
+  funcR: SVGFEFuncRElement | null;
   filterId: string;
   /** Hijos de contenido a los que se aplica el filtro (excluye el svg). */
   targets: HTMLElement[];
@@ -47,7 +50,8 @@ type StepMeta = {
 type StepDir = "up" | "left" | "right" | "zoom";
 
 const BG = "#0c0e09";
-const SAND_SCALE = 130;
+// El desplazamiento es de un solo lado (viento): más escala para compensar.
+const SAND_SCALE = 170;
 const ENTER_MS = 850;
 const EXIT_MS = 600;
 
@@ -144,6 +148,8 @@ export default function ScrollSequence({
       to: parseFloat(el.dataset.to ?? "1"),
       dir: (el.dataset.dir ?? "up") as StepDir,
       disp: el.querySelector<SVGFEDisplacementMapElement>("feDisplacementMap"),
+      blur: el.querySelector<SVGFEGaussianBlurElement>("feGaussianBlur"),
+      funcR: el.querySelector<SVGFEFuncRElement>("feFuncR"),
       filterId: el.dataset.sandId ?? "",
       targets: Array.from(el.children).filter(
         (c): c is HTMLElement => c instanceof HTMLElement,
@@ -166,6 +172,8 @@ export default function ScrollSequence({
           const edge =
             progress < (s.from + s.to) / 2 ? ("start" as const) : ("end" as const);
           s.vec = vecFor(s.dir, edge);
+          // El viento sopla del lado por el que se mueve el paso.
+          s.funcR?.setAttribute("intercept", s.vec.x > 0 ? "0" : "0.5");
           // Bordes anclados al inicio/fin de la sección: sin animación.
           const anchored =
             edge === "start" ? s.from <= 0.001 : s.to >= 0.999;
@@ -186,12 +194,16 @@ export default function ScrollSequence({
         s.el.style.transform = `translate3d(${x.toFixed(2)}px, ${y.toFixed(2)}px, 0) scale(${sc.toFixed(4)})`;
         s.el.style.visibility = e <= 0.001 ? "hidden" : "visible";
 
-        // Arena: el contenido se disgrega en granos mientras la animación
-        // está en curso (filtro SVG de desplazamiento por ruido).
+        // Arena al viento: el contenido se disgrega en ráfagas mientras la
+        // animación está en curso (desplazamiento por ruido + estela).
         if (s.disp && !reducedMotion) {
           const granular = e > 0.001 && e < 0.999;
           if (granular) {
             s.disp.setAttribute("scale", ((1 - e) * SAND_SCALE).toFixed(1));
+            s.blur?.setAttribute(
+              "stdDeviation",
+              `${((1 - e) * 6).toFixed(2)} 0`,
+            );
           }
           for (const target of s.targets) {
             target.style.filter = granular ? `url(#${s.filterId})` : "none";
@@ -340,36 +352,7 @@ export function SeqStep({
       style={{ opacity: 0, visibility: "hidden" }}
       className={`absolute will-change-transform ${className}`}
     >
-      <svg
-        aria-hidden="true"
-        width="0"
-        height="0"
-        className="pointer-events-none absolute"
-      >
-        <filter
-          id={filterId}
-          x="-40%"
-          y="-40%"
-          width="180%"
-          height="180%"
-          colorInterpolationFilters="sRGB"
-        >
-          <feTurbulence
-            type="fractalNoise"
-            baseFrequency="0.9"
-            numOctaves="2"
-            seed="7"
-            result="n"
-          />
-          <feDisplacementMap
-            in="SourceGraphic"
-            in2="n"
-            scale="0"
-            xChannelSelector="R"
-            yChannelSelector="G"
-          />
-        </filter>
-      </svg>
+      <SandFilter id={filterId} />
       {children}
     </div>
   );

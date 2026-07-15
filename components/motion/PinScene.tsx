@@ -20,6 +20,7 @@ import {
   useRef,
   type ReactNode,
 } from "react";
+import SandFilter from "@/components/motion/SandFilter";
 import { useSceneHeightVh } from "@/lib/useSceneHeight";
 
 /**
@@ -97,7 +98,8 @@ const edgeOffset = (edge: ShotEdge, isExit: boolean) => {
   }
 };
 
-const SAND_SCALE = 120;
+// El desplazamiento es de un solo lado (viento): más escala para compensar.
+const SAND_SCALE = 160;
 
 /**
  * Plano de una PinScene: visible mientras el progreso está en [from, to].
@@ -128,7 +130,10 @@ export function Shot({
   const rawId = useId();
   const filterId = `sand${rawId.replace(/[^a-zA-Z0-9]/g, "")}`;
   const outerRef = useRef<HTMLDivElement | null>(null);
-  const dispRef = useRef<SVGFEDisplacementMapElement | null>(null);
+  const filterNodesRef = useRef<{
+    disp: Element | null;
+    blur: Element | null;
+  } | null>(null);
   const reduced = useReducedMotion();
 
   const opacity = useMotionValue(0);
@@ -149,11 +154,18 @@ export function Shot({
   useMotionValueEvent(compose, "change", (v) => {
     if (!sand || reduced) return;
     const outer = outerRef.current;
-    const disp = dispRef.current;
-    if (!outer || !disp) return;
+    if (!outer) return;
+    const nodes = (filterNodesRef.current ??= {
+      disp: outer.querySelector("feDisplacementMap"),
+      blur: outer.querySelector("feGaussianBlur"),
+    });
     const granular = v > 0.001 && v < 0.999;
     if (granular) {
-      disp.setAttribute("scale", ((1 - v) * SAND_SCALE).toFixed(1));
+      nodes.disp?.setAttribute("scale", ((1 - v) * SAND_SCALE).toFixed(1));
+      nodes.blur?.setAttribute(
+        "stdDeviation",
+        `${((1 - v) * 6).toFixed(2)} 0`,
+      );
     }
     for (const child of outer.children) {
       if (!(child instanceof HTMLElement)) continue;
@@ -171,6 +183,11 @@ export function Shot({
       // usa el lado de entrada; por el final, el de salida.
       const edge = p < (from + to) / 2 ? enter : exit;
       const off = edgeOffset(edge, edge === exit);
+
+      // El viento sopla del lado por el que se mueve el plano.
+      outerRef.current
+        ?.querySelector("feFuncR")
+        ?.setAttribute("intercept", edge === "right" ? "0" : "0.5");
 
       controlsRef.current.forEach((c) => c.stop());
 
@@ -213,39 +230,7 @@ export function Shot({
       style={{ opacity, x, y, scale, visibility }}
       className={`absolute will-change-transform ${className}`}
     >
-      {sand && (
-        <svg
-          aria-hidden="true"
-          width="0"
-          height="0"
-          className="pointer-events-none absolute"
-        >
-          <filter
-            id={filterId}
-            x="-40%"
-            y="-40%"
-            width="180%"
-            height="180%"
-            colorInterpolationFilters="sRGB"
-          >
-            <feTurbulence
-              type="fractalNoise"
-              baseFrequency="0.9"
-              numOctaves="2"
-              seed="7"
-              result="n"
-            />
-            <feDisplacementMap
-              ref={dispRef}
-              in="SourceGraphic"
-              in2="n"
-              scale="0"
-              xChannelSelector="R"
-              yChannelSelector="G"
-            />
-          </filter>
-        </svg>
-      )}
+      {sand && <SandFilter id={filterId} />}
       {children}
     </motion.div>
   );
