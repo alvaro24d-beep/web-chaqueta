@@ -21,11 +21,25 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Sin desbordamiento horizontal: los elementos a la espera de su animación
+   de entrada viven desplazados en X y no deben ensanchar la página (en móvil
+   expandirían el layout viewport y la página se podría panear de lado). */
+html,
+body {
+  overflow-x: hidden;
+}
+
+@supports (overflow: clip) {
+  html,
+  body {
+    overflow-x: clip;
+  }
+}
+
 body {
   background: var(--color-coal);
   color: var(--color-bone);
   font-family: var(--font-body), system-ui, sans-serif;
-  overflow-x: hidden;
 }
 
 ::selection {

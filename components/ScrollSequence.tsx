@@ -107,12 +107,14 @@ export default function ScrollSequence({
     let width = 0;
     let height = 0;
     let progress = 0;
+    let frameProgress = 0;
+    let preRoll = 0;
     let lastImg: HTMLImageElement | null = null;
     let raf = 0;
     let active = false;
 
     const desiredFrame = () =>
-      Math.min(n - 1, Math.max(0, Math.round(progress * (n - 1))));
+      Math.min(n - 1, Math.max(0, Math.round(frameProgress * (n - 1))));
 
     const draw = (force = false) => {
       const img = loader.nearest(desiredFrame());
@@ -179,7 +181,13 @@ export default function ScrollSequence({
     const measure = () => {
       const rect = section.getBoundingClientRect();
       const total = rect.height - window.innerHeight;
+      // Línea de tiempo de los pasos: solo el tramo fijo (sticky).
       progress = total > 0 ? Math.min(1, Math.max(0, -rect.top / total)) : 0;
+      // Línea de tiempo de los fotogramas: arranca ya en la aproximación
+      // (preRoll px antes del pin) para que el vídeo nunca llegue parado.
+      const span = total + preRoll;
+      frameProgress =
+        span > 0 ? Math.min(1, Math.max(0, (preRoll - rect.top) / span)) : 0;
     };
 
     const tick = () => {
@@ -196,6 +204,14 @@ export default function ScrollSequence({
       height = sticky.clientHeight * dpr;
       canvas.width = width;
       canvas.height = height;
+      // Aproximación disponible antes del pin: una pantalla, o menos si la
+      // sección nace más arriba (el hero, en top 0, no tiene pre-roll).
+      const rect = section.getBoundingClientRect();
+      preRoll = Math.min(
+        window.innerHeight,
+        Math.max(0, rect.top + window.scrollY),
+      );
+      measure();
       draw(true);
     };
 

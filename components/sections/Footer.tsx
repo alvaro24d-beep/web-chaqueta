@@ -28,7 +28,7 @@ export default function Footer() {
   return (
     <>
       <div className="hidden lg:block lg:h-[78vh]" aria-hidden="true" />
-      <footer className="border-t border-bone/10 bg-coal px-6 pb-10 pt-20 sm:px-10 lg:fixed lg:inset-x-0 lg:bottom-0 lg:z-0 lg:flex lg:h-[78vh] lg:flex-col lg:justify-center lg:pt-0">
+      <footer className="overflow-hidden border-t border-bone/10 bg-coal px-6 pb-10 pt-20 sm:px-10 lg:fixed lg:inset-x-0 lg:bottom-0 lg:z-0 lg:flex lg:h-[78vh] lg:flex-col lg:justify-center lg:pt-0">
         <div className="mx-auto w-full max-w-7xl">
           <StaggerGroup
             className="grid gap-14 md:grid-cols-[1.5fr_1fr_1fr_1fr]"
