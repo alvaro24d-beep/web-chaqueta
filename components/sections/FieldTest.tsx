@@ -105,10 +105,11 @@ export default function FieldTest() {
 
       <VideoLayer />
 
-      {/* Plano 2 — la cita entra por la derecha sobre el vídeo ya grande */}
+      {/* Plano 2 — la cita entra por la derecha sobre el vídeo ya grande y
+          sale antes de que la cresta del final la corte */}
       <Shot
         from={0.7}
-        to={1}
+        to={0.96}
         enter="right"
         className="inset-x-0 bottom-[9%] flex justify-center px-6"
       >

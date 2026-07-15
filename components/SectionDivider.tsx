@@ -47,25 +47,27 @@ const POINTS: ReadonlyArray<readonly [number, number]> = [
   [1440, 70],
 ];
 
+// Cordillera trasera: abraza la cresta (sus picos asoman apenas por encima
+// de los picos frontales y sus valles quedan detrás de la cinta).
 const BACK_POINTS: ReadonlyArray<readonly [number, number]> = [
-  [0, 84],
-  [72, 34],
-  [156, 62],
+  [0, 58],
+  [72, 26],
+  [156, 48],
   [228, 14],
-  [312, 50],
-  [396, 24],
-  [480, 58],
+  [312, 42],
+  [396, 20],
+  [480, 50],
   [576, 10],
-  [660, 44],
-  [756, 20],
-  [840, 54],
+  [660, 38],
+  [756, 18],
+  [840, 46],
   [924, 12],
-  [1020, 40],
-  [1104, 26],
-  [1188, 52],
-  [1284, 16],
-  [1368, 44],
-  [1440, 84],
+  [1020, 36],
+  [1104, 22],
+  [1188, 44],
+  [1284, 14],
+  [1368, 40],
+  [1440, 58],
 ];
 
 const ridgeLine = (
@@ -86,7 +88,7 @@ const ridgeBand = (
 
 const CREST_LINE = ridgeLine(POINTS);
 const CREST_RIBBON = ridgeBand(POINTS, -5, 21);
-const HAZE_BAND = ridgeBand(BACK_POINTS, 0, 26);
+const HAZE_BAND = ridgeBand(BACK_POINTS, 0, 20);
 
 export default function SectionDivider({ fill }: { fill: string }) {
   const rawId = useId();
@@ -94,7 +96,9 @@ export default function SectionDivider({ fill }: { fill: string }) {
   const hazeRef = useRef<SVGSVGElement | null>(null);
   const crestRef = useRef<SVGSVGElement | null>(null);
   const dispRef = useRef<SVGFEDisplacementMapElement | null>(null);
+  const feImageRef = useRef<SVGFEImageElement | null>(null);
   const lastScaleRef = useRef(-1);
+  const lastNoiseXRef = useRef(0);
   const inViewRef = useRef(false);
   const reduced = useReducedMotion();
 
@@ -129,27 +133,49 @@ export default function SectionDivider({ fill }: { fill: string }) {
     applyFilter(q);
   });
 
-  // Activación por visibilidad (la frontera está erosionada desde que asoma).
+  // Activación por visibilidad (la frontera está erosionada desde que asoma)
+  // + deriva continua del campo de ruido: la falla repta sola, también con
+  // el scroll parado. rAF propio porque SMIL sobre primitivas de filtro no
+  // repinta filtros CSS referenciados en Chromium.
   useEffect(() => {
     const target = crestRef.current;
     if (!target || reduced) return;
+
+    let raf = 0;
+    const drift = (now: number) => {
+      if (!inViewRef.current) return;
+      // ~64 px/s en pasos de 2px (feTile envuelve sin costura)
+      const x = Math.round((-((now / 1000) * 64) % 512) / 2) * 2;
+      if (x !== lastNoiseXRef.current) {
+        lastNoiseXRef.current = x;
+        feImageRef.current?.setAttribute("x", String(x));
+      }
+      raf = requestAnimationFrame(drift);
+    };
+
     const io = new IntersectionObserver(
       (entries) => {
         const visible = entries.some((e) => e.isIntersecting);
+        if (visible === inViewRef.current) return;
         inViewRef.current = visible;
         if (visible) {
           const q = Math.max(24, Math.round(erosion.get() / 6) * 6);
           lastScaleRef.current = q;
           applyFilter(q);
+          raf = requestAnimationFrame(drift);
         } else {
           lastScaleRef.current = -1;
           applyFilter(0);
+          cancelAnimationFrame(raf);
         }
       },
       { rootMargin: "20% 0px 20% 0px" },
     );
     io.observe(target);
-    return () => io.disconnect();
+    return () => {
+      io.disconnect();
+      cancelAnimationFrame(raf);
+    };
   }, [applyFilter, erosion, reduced]);
 
   return (
@@ -167,6 +193,7 @@ export default function SectionDivider({ fill }: { fill: string }) {
           colorInterpolationFilters="sRGB"
         >
           <feImage
+            ref={feImageRef}
             href="/sand-noise.png"
             x="0"
             y="0"
@@ -186,11 +213,12 @@ export default function SectionDivider({ fill }: { fill: string }) {
         </filter>
       </svg>
 
-      {/* Bruma: cordillera translúcida derivando sobre la sección anterior */}
-      <div className="absolute inset-x-0 bottom-0 h-16 overflow-hidden sm:h-28">
+      {/* Cordillera trasera: deriva pegada a la cresta, asomando tras los
+          picos (se pinta antes que la cresta → queda detrás de la cinta) */}
+      <div className="absolute inset-x-0 top-0 h-16 overflow-hidden sm:h-28">
         <svg
           ref={hazeRef}
-          className="divider-back absolute bottom-0 left-0 h-full w-[200%]"
+          className="divider-back absolute left-0 top-0 h-full w-[200%]"
           viewBox="0 0 2880 120"
           preserveAspectRatio="none"
         >

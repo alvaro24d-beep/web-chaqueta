@@ -13,6 +13,25 @@ import RotatingWord from "@/components/motion/RotatingWord";
 import VelocityMarquee from "@/components/motion/VelocityMarquee";
 import { EASE_OUT } from "@/lib/motion";
 
+/**
+ * La marquesina vive pegada al borde inferior: se desvanece al final de la
+ * escena para que la cresta de la siguiente sección no la corte a medias.
+ * Estado por umbral (useSceneCue), no scrub: fiable y se reproduce entera.
+ */
+function MarqueeBand({ children }: { children: ReactNode }) {
+  const gone = useSceneCue(0.87);
+  return (
+    <motion.div
+      initial={false}
+      animate={{ opacity: gone ? 0 : 1 }}
+      transition={{ duration: 0.35, ease: EASE_OUT }}
+      className="absolute inset-x-[-1rem] bottom-6 -rotate-[1.5deg] bg-ember py-4 text-coal"
+    >
+      {children}
+    </motion.div>
+  );
+}
+
 /** Celda de stat que entra en cascada cuando el plano de datos se activa. */
 function StatCell({ index, children }: { index: number; children: ReactNode }) {
   const passed = useSceneCue(0.68);
@@ -142,8 +161,8 @@ export default function Manifesto() {
         </dl>
       </Shot>
 
-      {/* Banda persistente durante toda la escena */}
-      <div className="absolute inset-x-[-1rem] bottom-6 -rotate-[1.5deg] bg-ember py-4 text-coal">
+      {/* Banda persistente durante la escena (se funde antes de la cresta) */}
+      <MarqueeBand>
         <VelocityMarquee baseVelocity={3}>
           {MARQUEE.map((item) => (
             <span
@@ -154,7 +173,7 @@ export default function Manifesto() {
             </span>
           ))}
         </VelocityMarquee>
-      </div>
+      </MarqueeBand>
     </PinScene>
   );
 }

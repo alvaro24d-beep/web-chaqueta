@@ -1,7 +1,13 @@
 ﻿"use client";
 
-import { motion, useScroll, useTransform } from "framer-motion";
+import {
+  motion,
+  useMotionValueEvent,
+  useScroll,
+  useTransform,
+} from "framer-motion";
 import { useEffect, useRef, useState } from "react";
+import { EASE_OUT } from "@/lib/motion";
 import { useMediaQuery } from "@/lib/useMediaQuery";
 import SectionDivider from "@/components/SectionDivider";
 import SandText from "@/components/motion/SandText";
@@ -73,6 +79,10 @@ export default function FeaturesGrid() {
 
   const x = useTransform(scrollYProgress, [0.04, 0.96], [0, -maxShift]);
   const barScaleX = useTransform(scrollYProgress, [0.04, 0.96], [0, 1]);
+  // La barra se funde al final para que la cresta entrante no la corte
+  // (estado por umbral, no scrub: fiable y se reproduce entera).
+  const [barGone, setBarGone] = useState(false);
+  useMotionValueEvent(scrollYProgress, "change", (p) => setBarGone(p > 0.93));
   // useMediaQuery (useSyncExternalStore) y no useReducedMotion: el layout
   // cambia de árbol entero y debe hidratar con el snapshot del servidor.
   const reduced = useMediaQuery("(prefers-reduced-motion: reduce)");
@@ -184,14 +194,19 @@ export default function FeaturesGrid() {
           ))}
         </motion.div>
 
-        <div className="absolute inset-x-6 bottom-10 sm:inset-x-16">
+        <motion.div
+          initial={false}
+          animate={{ opacity: barGone ? 0 : 1 }}
+          transition={{ duration: 0.35, ease: EASE_OUT }}
+          className="absolute inset-x-6 bottom-10 sm:inset-x-16"
+        >
           <div className="h-[2px] bg-coal/15">
             <motion.div
               style={{ scaleX: barScaleX }}
               className="h-full origin-left bg-ember"
             />
           </div>
-        </div>
+        </motion.div>
       </div>
     </section>
     <SectionDivider fill="#e8e5da" />
