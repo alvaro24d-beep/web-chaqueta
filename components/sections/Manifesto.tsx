@@ -1,10 +1,14 @@
-import Counter from "@/components/motion/Counter";
 import DragSticker from "@/components/motion/DragSticker";
+import { PinScene, ScrubCounter, Shot } from "@/components/motion/PinScene";
 import RotatingWord from "@/components/motion/RotatingWord";
 import VelocityMarquee from "@/components/motion/VelocityMarquee";
-import { ClipReveal, FadeUp } from "@/components/motion/reveals";
 
-const STATS = [
+const STATS: {
+  prefix?: string;
+  to: number;
+  unit: string;
+  label: string;
+}[] = [
   { to: 28000, unit: "mm", label: "Columna de agua" },
   { prefix: "<", to: 6, unit: "RET", label: "Transpirabilidad" },
   { to: 315, unit: "g", label: "Peso · talla M" },
@@ -23,24 +27,37 @@ const MARQUEE = [
 
 export default function Manifesto() {
   return (
-    <section aria-label="Manifiesto" className="relative overflow-hidden bg-coal">
+    <PinScene heightVh={320} ariaLabel="Manifiesto" className="bg-coal">
       <DragSticker />
 
-      <div className="mx-auto max-w-7xl px-6 pb-40 pt-32 sm:px-10">
-        <ClipReveal>
-          <h2 className="font-display uppercase leading-[0.88] text-[clamp(3rem,9.5vw,8.5rem)]">
-            La montaña
-            <br />
-            <span className="text-outline">no perdona.</span>
-          </h2>
-        </ClipReveal>
+      {/* Plano 1 — sentencia */}
+      <Shot
+        from={0}
+        to={0.34}
+        exit="left"
+        className="inset-0 flex items-center justify-center px-6 pb-24"
+      >
+        <h2 className="text-center font-display uppercase leading-[0.88] text-[clamp(3rem,11vw,10rem)]">
+          La montaña
+          <br />
+          <span className="text-outline">no perdona.</span>
+        </h2>
+      </Shot>
 
-        <div className="mt-14 grid gap-12 md:grid-cols-[1fr_1.2fr] md:gap-20">
-          <FadeUp delay={0.1}>
+      {/* Plano 2 — manifiesto */}
+      <Shot
+        from={0.34}
+        to={0.66}
+        enter="right"
+        exit="left"
+        className="inset-0 flex items-center px-6 pb-24 sm:px-[8vw]"
+      >
+        <div className="mx-auto grid w-full max-w-6xl items-center gap-12 md:grid-cols-[1fr_1.3fr] md:gap-20">
+          <div>
             <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-olive">
               Manifiesto — STRATUM 3L
             </p>
-            <p className="mt-8 font-display text-3xl uppercase leading-[1.05] text-bone sm:text-4xl">
+            <p className="mt-8 font-display text-3xl uppercase leading-[1.05] text-bone sm:text-5xl">
               Pensada para
               <br />
               <RotatingWord
@@ -48,42 +65,51 @@ export default function Manifesto() {
                 words={["la lluvia.", "el viento.", "la ventisca.", "el granizo."]}
               />
             </p>
-          </FadeUp>
-          <FadeUp delay={0.2}>
-            <p className="max-w-2xl text-lg leading-relaxed text-bone-dim sm:text-xl">
-              Por eso cada costura, cada gramo y cada milímetro de membrana de
-              la STRATUM 3L están ahí por una razón — y todo lo que no la
-              tenía, se quedó fuera. Sin faldones que pesan, sin forros que
-              crujen, sin promesas de catálogo.{" "}
-              <span className="text-bone">
-                Solo protección seria, medida en laboratorio y validada en
-                cresta.
-              </span>
-            </p>
-          </FadeUp>
+          </div>
+          <p className="max-w-2xl text-lg leading-relaxed text-bone-dim sm:text-xl">
+            Por eso cada costura, cada gramo y cada milímetro de membrana de
+            la STRATUM 3L están ahí por una razón — y todo lo que no la
+            tenía, se quedó fuera. Sin faldones que pesan, sin forros que
+            crujen, sin promesas de catálogo.{" "}
+            <span className="text-bone">
+              Solo protección seria, medida en laboratorio y validada en
+              cresta.
+            </span>
+          </p>
         </div>
+      </Shot>
 
-        <dl className="mt-24 grid grid-cols-2 gap-px border border-bone/10 bg-bone/10 lg:grid-cols-4">
-          {STATS.map((s, i) => (
+      {/* Plano 3 — datos que cuentan con el scroll */}
+      <Shot
+        from={0.66}
+        to={1}
+        enter="right"
+        className="inset-0 flex items-center justify-center px-6 pb-24 sm:px-[8vw]"
+      >
+        <dl className="mx-auto grid w-full max-w-6xl grid-cols-2 gap-px border border-bone/10 bg-bone/10 lg:grid-cols-4">
+          {STATS.map((s) => (
             <div key={s.label} className="bg-coal p-8 sm:p-10">
-              <FadeUp delay={i * 0.09}>
-                <dd className="font-display text-5xl leading-none sm:text-7xl">
-                  {s.prefix}
-                  <Counter to={s.to} />
-                  <span className="ml-2 text-2xl text-olive sm:text-3xl">
-                    {s.unit}
-                  </span>
-                </dd>
-                <dt className="mt-4 font-mono text-[11px] uppercase tracking-[0.25em] text-bone-dim">
-                  {s.label}
-                </dt>
-              </FadeUp>
+              <dd className="font-display text-5xl leading-none sm:text-7xl">
+                <ScrubCounter
+                  to={s.to}
+                  start={0.7}
+                  end={0.92}
+                  prefix={s.prefix ?? ""}
+                />
+                <span className="ml-2 text-2xl text-olive sm:text-3xl">
+                  {s.unit}
+                </span>
+              </dd>
+              <dt className="mt-4 font-mono text-[11px] uppercase tracking-[0.25em] text-bone-dim">
+                {s.label}
+              </dt>
             </div>
           ))}
         </dl>
-      </div>
+      </Shot>
 
-      <div className="-mx-4 -rotate-[1.5deg] bg-ember py-4 text-coal">
+      {/* Banda persistente durante toda la escena */}
+      <div className="absolute inset-x-[-1rem] bottom-6 -rotate-[1.5deg] bg-ember py-4 text-coal">
         <VelocityMarquee baseVelocity={3}>
           {MARQUEE.map((item) => (
             <span
@@ -95,6 +121,6 @@ export default function Manifesto() {
           ))}
         </VelocityMarquee>
       </div>
-    </section>
+    </PinScene>
   );
 }

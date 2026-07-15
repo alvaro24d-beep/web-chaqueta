@@ -3,17 +3,19 @@
 import { motion, type Variants } from "framer-motion";
 
 const LETTER: Variants = {
-  hidden: { opacity: 0, y: "0.55em" },
+  hidden: { opacity: 0, scale: 1.35, filter: "blur(10px)" },
   show: {
     opacity: 1,
-    y: "0em",
-    transition: { duration: 0.65, ease: [0.16, 1, 0.3, 1] },
+    scale: 1,
+    filter: "blur(0px)",
+    transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] },
   },
 };
 
 /**
- * Divide un texto en letras que entran escalonadas. Sin máscara overflow:
- * con Anton a line-height < 1 la caja de línea recortaría tildes y virgulillas.
+ * Divide un texto en letras que enfocan a cámara escalonadas (zoom + blur,
+ * nada de subir desde abajo). Sin máscara overflow: con Anton a line-height
+ * < 1 la caja de línea recortaría tildes y virgulillas.
  * El contenedor va aria-hidden: pon el texto accesible en el elemento padre.
  */
 export default function SplitLetters({

@@ -24,10 +24,13 @@ type ScrollSequenceProps = {
   children?: ReactNode;
 };
 
+type StepDir = "up" | "left" | "right" | "zoom";
+
 type StepMeta = {
   el: HTMLElement;
   from: number;
   to: number;
+  dir: StepDir;
 };
 
 const BG = "#0c0e09";
@@ -136,13 +139,16 @@ export default function ScrollSequence({
       el,
       from: parseFloat(el.dataset.from ?? "0"),
       to: parseFloat(el.dataset.to ?? "1"),
+      dir: (el.dataset.dir ?? "up") as StepDir,
     }));
 
     const updateSteps = () => {
       for (const s of steps) {
         const t = (progress - s.from) / (s.to - s.from);
         let opacity = 0;
-        let ty = 0;
+        let x = 0;
+        let y = 0;
+        let sc = 1;
         if (t >= 0 && t <= 1) {
           // Rampas de entrada/salida en el 25% de cada extremo del rango.
           // Los pasos anclados al inicio (from<=0) o al final (to>=1) de la
@@ -150,12 +156,22 @@ export default function ScrollSequence({
           const rampIn = s.from <= 0.001 ? 1 : Math.min(1, t / 0.25);
           const rampOut = s.to >= 0.999 ? 1 : Math.min(1, (1 - t) / 0.25);
           opacity = smooth(Math.min(rampIn, rampOut));
-          ty = (1 - rampIn) * 32 - (1 - rampOut) * 32;
+          const inD = 1 - rampIn;
+          const outD = 1 - rampOut;
+          // "left"/"right" cruzan la pantalla (entran por un lado y salen por
+          // el contrario); "zoom" viene de lejos y sale hacia cámara.
+          if (s.dir === "left") x = -inD * 110 + outD * 110;
+          else if (s.dir === "right") x = inD * 110 - outD * 110;
+          else if (s.dir === "zoom") sc = 1 - inD * 0.14 + outD * 0.09;
+          else y = inD * 32 - outD * 32;
         } else {
-          ty = t < 0 ? 32 : -32;
+          if (s.dir === "left") x = t < 0 ? -110 : 110;
+          else if (s.dir === "right") x = t < 0 ? 110 : -110;
+          else if (s.dir === "zoom") sc = t < 0 ? 0.86 : 1.09;
+          else y = t < 0 ? 32 : -32;
         }
         s.el.style.opacity = opacity.toFixed(3);
-        s.el.style.transform = `translate3d(0, ${ty.toFixed(2)}px, 0)`;
+        s.el.style.transform = `translate3d(${x.toFixed(2)}px, ${y.toFixed(2)}px, 0) scale(${sc.toFixed(4)})`;
         s.el.style.visibility = opacity === 0 ? "hidden" : "visible";
       }
     };
@@ -251,15 +267,19 @@ export default function ScrollSequence({
  * Paso superpuesto de una ScrollSequence. Visible mientras el progreso de la
  * sección está dentro de [from, to]. Posiciónalo SOLO con inset/flex en
  * className (nunca con utilidades translate-*: el transform lo pilota JS).
+ * `dir` marca la coreografía: "left"/"right" cruzan la pantalla, "zoom"
+ * acerca el plano a cámara, "up" es el desplazamiento vertical clásico.
  */
 export function SeqStep({
   from,
   to,
+  dir = "up",
   className = "",
   children,
 }: {
   from: number;
   to: number;
+  dir?: "up" | "left" | "right" | "zoom";
   className?: string;
   children: ReactNode;
 }) {
@@ -267,6 +287,7 @@ export function SeqStep({
     <div
       data-from={from}
       data-to={to}
+      data-dir={dir}
       style={{ opacity: 0, visibility: "hidden" }}
       className={`absolute will-change-transform ${className}`}
     >

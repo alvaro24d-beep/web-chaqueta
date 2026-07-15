@@ -56,6 +56,7 @@ export default function Details() {
           key={c.index}
           from={c.from}
           to={c.to}
+          dir={c.side === "left" ? "left" : "right"}
           className={`inset-y-0 flex items-center px-6 sm:px-[7vw] ${
             c.side === "left"
               ? "left-0 justify-start"

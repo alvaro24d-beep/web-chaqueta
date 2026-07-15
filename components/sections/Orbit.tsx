@@ -19,6 +19,7 @@ export default function Orbit() {
       <SeqStep
         from={0.04}
         to={0.32}
+        dir="left"
         className="inset-y-0 left-0 flex items-center px-6 sm:px-[7vw]"
       >
         <div className="max-w-md">
@@ -38,6 +39,7 @@ export default function Orbit() {
       <SeqStep
         from={0.36}
         to={0.64}
+        dir="right"
         className="inset-y-0 right-0 flex items-center justify-end px-6 text-right sm:px-[7vw]"
       >
         <div className="max-w-md">
@@ -57,6 +59,7 @@ export default function Orbit() {
       <SeqStep
         from={0.7}
         to={1}
+        dir="left"
         className="inset-y-0 left-0 flex items-center px-6 sm:px-[7vw]"
       >
         <div className="max-w-md">

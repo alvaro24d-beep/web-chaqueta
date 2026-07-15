@@ -7,23 +7,37 @@ export const EASE_OUT: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
 const VIEWPORT = { once: true, amount: 0.18, margin: "0px 0px -8% 0px" } as const;
 
-/** Entrada básica: sube y funde al entrar en el viewport. */
-export function FadeUp({
+/**
+ * Entrada al viewport SIN el clásico "desde abajo": lateral, zoom o fundido
+ * en el sitio. Para contenido dentro de escenas fijadas usa <Shot> (PinScene).
+ */
+export function SlideIn({
   children,
   className = "",
   delay = 0,
-  y = 34,
+  from = "left",
+  distance = 90,
 }: {
   children: ReactNode;
   className?: string;
   delay?: number;
-  y?: number;
+  from?: "left" | "right" | "zoom" | "fade";
+  distance?: number;
 }) {
+  const initial =
+    from === "left"
+      ? { opacity: 0, x: -distance }
+      : from === "right"
+        ? { opacity: 0, x: distance }
+        : from === "zoom"
+          ? { opacity: 0, scale: 0.92 }
+          : { opacity: 0 };
+
   return (
     <motion.div
       className={className}
-      initial={{ opacity: 0, y }}
-      whileInView={{ opacity: 1, y: 0 }}
+      initial={initial}
+      whileInView={{ opacity: 1, x: 0, scale: 1 }}
       viewport={VIEWPORT}
       transition={{ duration: 0.9, ease: EASE_OUT, delay }}
     >
@@ -31,53 +45,6 @@ export function FadeUp({
     </motion.div>
   );
 }
-
-/**
- * Reveal por recorte para titulares. El motion exterior (sin clip) es el que
- * observa el viewport y propaga la variante al hijo recortado: Chrome aplica
- * el clip-path del propio elemento al calcular la intersección, así que un
- * elemento recortado a área cero nunca dispararía por sí mismo.
- * El inset final es negativo para no rebanar la virgulilla de la Ñ.
- */
-export function ClipReveal({
-  children,
-  className = "",
-  innerClassName = "",
-  delay = 0,
-}: {
-  children: ReactNode;
-  className?: string;
-  innerClassName?: string;
-  delay?: number;
-}) {
-  return (
-    <motion.div
-      className={className}
-      initial="hidden"
-      whileInView="show"
-      viewport={VIEWPORT}
-    >
-      <motion.div
-        className={innerClassName}
-        variants={{
-          hidden: { clipPath: "inset(0% 0% 100% 0%)", y: 14 },
-          show: {
-            clipPath: "inset(-15% 0% -15% 0%)",
-            y: 0,
-            transition: { duration: 1.1, ease: EASE_OUT, delay },
-          },
-        }}
-      >
-        {children}
-      </motion.div>
-    </motion.div>
-  );
-}
-
-const ITEM_VARIANTS: Variants = {
-  hidden: { opacity: 0, y: 38 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.8, ease: EASE_OUT } },
-};
 
 /** Contenedor que escalona la entrada de sus StaggerItem hijos. */
 export function StaggerGroup({
@@ -116,14 +83,20 @@ export function StaggerItem({
   children,
   className = "",
   as = "div",
+  from = "left",
 }: {
   children: ReactNode;
   className?: string;
   as?: "div" | "li";
+  from?: "left" | "right";
 }) {
   const Comp = as === "li" ? motion.li : motion.div;
+  const variants: Variants = {
+    hidden: { opacity: 0, x: from === "left" ? -46 : 46 },
+    show: { opacity: 1, x: 0, transition: { duration: 0.8, ease: EASE_OUT } },
+  };
   return (
-    <Comp className={className} variants={ITEM_VARIANTS}>
+    <Comp className={className} variants={variants}>
       {children}
     </Comp>
   );

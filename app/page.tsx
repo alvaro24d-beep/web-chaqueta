@@ -15,7 +15,8 @@ export default function Home() {
     <div id="top">
       <ScrollProgress />
       <Nav />
-      <main>
+      {/* El contenido va por encima (z-10) del footer telón (z-0) */}
+      <main className="relative z-10 bg-coal">
         <Hero />
         <Manifesto />
         <Details />

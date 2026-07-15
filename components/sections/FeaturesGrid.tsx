@@ -1,10 +1,8 @@
+"use client";
+
+import { motion, useScroll, useTransform } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
 import TiltCard from "@/components/motion/TiltCard";
-import {
-  ClipReveal,
-  FadeUp,
-  StaggerGroup,
-  StaggerItem,
-} from "@/components/motion/reveals";
 
 const FEATURES = [
   {
@@ -39,53 +37,98 @@ const FEATURES = [
   },
 ];
 
+/**
+ * Escena de travelling horizontal: la sección se fija y el scroll vertical
+ * desplaza la fila de paneles en horizontal, como recorrer un plano lateral.
+ */
 export default function FeaturesGrid() {
+  const sectionRef = useRef<HTMLElement | null>(null);
+  const trackRef = useRef<HTMLDivElement | null>(null);
+  const [maxShift, setMaxShift] = useState(0);
+
+  const { scrollYProgress } = useScroll({
+    target: sectionRef,
+    offset: ["start start", "end end"],
+  });
+
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!track) return;
+    const measure = () =>
+      setMaxShift(Math.max(0, track.scrollWidth - window.innerWidth));
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(track);
+    window.addEventListener("resize", measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, []);
+
+  const x = useTransform(scrollYProgress, [0.04, 0.96], [0, -maxShift]);
+  const barScaleX = useTransform(scrollYProgress, [0.04, 0.96], [0, 1]);
+
   return (
     <section
+      ref={sectionRef}
       id="pro"
       aria-label="Características pro"
-      className="bg-bone px-6 py-28 text-coal sm:px-10 sm:py-36"
+      className="relative bg-bone text-coal"
+      style={{ height: "340vh" }}
     >
-      <div className="mx-auto max-w-7xl">
-        <div className="mb-20 grid items-end gap-10 md:grid-cols-[1.4fr_1fr]">
-          <ClipReveal>
+      <div className="sticky top-0 flex h-screen flex-col justify-center overflow-hidden">
+        <motion.div
+          ref={trackRef}
+          style={{ x }}
+          className="flex w-max items-stretch gap-6 px-6 sm:gap-10 sm:px-16"
+        >
+          <div className="flex w-[82vw] shrink-0 flex-col justify-center sm:w-[46vw]">
             <p className="mb-5 font-mono text-[11px] uppercase tracking-[0.3em] text-moss">
               Sin adornos — solo ingeniería
             </p>
-            <h2 className="font-display uppercase leading-[0.88] text-[clamp(3rem,9vw,8rem)]">
+            <h2 className="font-display uppercase leading-[0.88] text-[clamp(3rem,7.5vw,7rem)]">
               Pro <span className="text-outline-dark">de serie</span>
             </h2>
-          </ClipReveal>
-          <FadeUp delay={0.15}>
-            <p className="max-w-md text-lg leading-relaxed text-coal/70">
+            <p className="mt-8 max-w-md text-lg leading-relaxed text-coal/70">
               Nada de versiones «pro» que cuestan aparte. Cada STRATUM 3L sale
               de fábrica con todo lo que la montaña va a pedirle.
             </p>
-          </FadeUp>
-        </div>
+            <p className="mt-10 font-mono text-[11px] uppercase tracking-[0.3em] text-ember">
+              Sigue deslizando — la escena avanza en horizontal →
+            </p>
+          </div>
 
-        <StaggerGroup
-          as="ul"
-          className="grid gap-px border border-coal/15 bg-coal/15 sm:grid-cols-2 lg:grid-cols-3"
-        >
           {FEATURES.map((f) => (
-            <StaggerItem key={f.index} as="li" className="group bg-bone">
+            <div
+              key={f.index}
+              className="group w-[74vw] shrink-0 border border-coal/15 bg-bone sm:w-[42vw] lg:w-[30vw]"
+            >
               <TiltCard className="h-full">
-                <div className="flex h-full flex-col p-8 transition-colors duration-500 group-hover:bg-coal group-hover:text-bone sm:p-10">
-                  <p className="font-display text-5xl leading-none text-coal/15 transition-colors duration-500 group-hover:text-ember sm:text-6xl">
+                <div className="flex h-full min-h-[52vh] flex-col p-8 transition-colors duration-500 group-hover:bg-coal group-hover:text-bone sm:p-10">
+                  <p className="font-display text-6xl leading-none text-coal/15 transition-colors duration-500 group-hover:text-ember sm:text-7xl">
                     {f.index}
                   </p>
-                  <h3 className="mb-3 mt-8 font-display text-2xl uppercase tracking-wide">
+                  <h3 className="mb-3 mt-auto font-display text-2xl uppercase tracking-wide sm:text-3xl">
                     {f.title}
                   </h3>
-                  <p className="text-sm leading-relaxed text-coal/65 transition-colors duration-500 group-hover:text-bone/70">
+                  <p className="text-sm leading-relaxed text-coal/65 transition-colors duration-500 group-hover:text-bone/70 sm:text-base">
                     {f.body}
                   </p>
                 </div>
               </TiltCard>
-            </StaggerItem>
+            </div>
           ))}
-        </StaggerGroup>
+        </motion.div>
+
+        <div className="absolute inset-x-6 bottom-10 sm:inset-x-16">
+          <div className="h-[2px] bg-coal/15">
+            <motion.div
+              style={{ scaleX: barScaleX }}
+              className="h-full origin-left bg-ember"
+            />
+          </div>
+        </div>
       </div>
     </section>
   );
