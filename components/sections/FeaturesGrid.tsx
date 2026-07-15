@@ -90,7 +90,7 @@ export default function FeaturesGrid() {
   // Movimiento reducido: nada de travelling lateral — grid vertical estático.
   if (reduced) {
     return (
-      <div className="relative -mt-16 sm:-mt-28">
+      <div className="relative -mt-24 sm:-mt-28">
         <section
           id="pro"
           aria-label="Características pro"
@@ -134,7 +134,7 @@ export default function FeaturesGrid() {
   }
 
   return (
-    <div className="relative -mt-16 sm:-mt-28">
+    <div className="relative -mt-24 sm:-mt-28">
     <section
       ref={sectionRef}
       id="pro"

@@ -69,24 +69,19 @@ body {
    puntos son los mismos de SectionDivider.tsx escalados a 64px (móvil) y
    112px (sm), a juego con las alturas h-16 / sm:h-28 de la decoración. */
 .ridge-clip {
+  /* Móvil: profundidad 96px (h-24), la mitad de picos (MOBILE_POINTS de
+     SectionDivider.tsx) y cresta +20 unidades — el borde queda enterrado
+     bajo la cinta erosionada */
   clip-path: polygon(
-    0 37px,
-    6.667% 25px,
-    11.667% 31px,
-    18.333% 18px,
-    23.333% 30px,
-    30% 21px,
-    36.667% 34px,
-    42.5% 19px,
-    49.167% 28px,
-    55.833% 22px,
-    61.667% 32px,
-    67.5% 18px,
-    74.167% 27px,
-    80% 21px,
-    86.667% 31px,
-    92.5% 25px,
-    100% 37px,
+    0 72px,
+    12.5% 46px,
+    25% 62px,
+    37.5% 40px,
+    50% 66px,
+    62.5% 45px,
+    75% 59px,
+    87.5% 48px,
+    100% 72px,
     100% 100%,
     0 100%
   );
@@ -94,24 +89,25 @@ body {
 
 @media (min-width: 640px) {
   .ridge-clip {
+    /* Escritorio: profundidad 112px (h-28) */
     clip-path: polygon(
-      0 65px,
-      6.667% 43px,
-      11.667% 54px,
-      18.333% 32px,
-      23.333% 52px,
-      30% 37px,
-      36.667% 60px,
-      42.5% 34px,
-      49.167% 49px,
-      55.833% 39px,
-      61.667% 56px,
-      67.5% 32px,
-      74.167% 47px,
-      80% 37px,
-      86.667% 54px,
-      92.5% 43px,
-      100% 65px,
+      0 84px,
+      6.667% 62px,
+      11.667% 73px,
+      18.333% 50px,
+      23.333% 71px,
+      30% 56px,
+      36.667% 78px,
+      42.5% 52px,
+      49.167% 67px,
+      55.833% 58px,
+      61.667% 75px,
+      67.5% 50px,
+      74.167% 65px,
+      80% 56px,
+      86.667% 73px,
+      92.5% 62px,
+      100% 84px,
       100% 100%,
       0 100%
     );

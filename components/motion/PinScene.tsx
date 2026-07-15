@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import {
   animate,
@@ -96,7 +96,7 @@ export function PinScene({
   // sección previa, no el fondo del body.
   if (!dividerFill) return scene;
   return (
-    <div className="relative -mt-16 sm:-mt-28">
+    <div className="relative -mt-24 sm:-mt-28">
       {scene}
       <SectionDivider fill={dividerFill} />
     </div>

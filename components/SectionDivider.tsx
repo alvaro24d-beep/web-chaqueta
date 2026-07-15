@@ -9,6 +9,7 @@ import {
   useVelocity,
 } from "framer-motion";
 import { useCallback, useEffect, useId, useRef } from "react";
+import { useMediaQuery } from "@/lib/useMediaQuery";
 
 /**
  * Frontera de sección viva. La división real la hace un clip-path de cresta
@@ -70,6 +71,34 @@ const BACK_POINTS: ReadonlyArray<readonly [number, number]> = [
   [1440, 58],
 ];
 
+// Variante móvil: la mitad de picos — 17 puntos comprimidos en ~390px se
+// verían como un serrucho fino; el clip .ridge-clip móvil usa estos mismos.
+const MOBILE_POINTS: ReadonlyArray<readonly [number, number]> = [
+  [0, 70],
+  [180, 38],
+  [360, 58],
+  [540, 30],
+  [720, 62],
+  [900, 36],
+  [1080, 54],
+  [1260, 40],
+  [1440, 70],
+];
+
+const MOBILE_BACK_POINTS: ReadonlyArray<readonly [number, number]> = [
+  [0, 58],
+  [144, 24],
+  [288, 46],
+  [432, 14],
+  [576, 50],
+  [720, 20],
+  [864, 44],
+  [1008, 12],
+  [1152, 40],
+  [1296, 26],
+  [1440, 58],
+];
+
 const ridgeLine = (
   pts: ReadonlyArray<readonly [number, number]>,
   dy = 0,
@@ -86,9 +115,21 @@ const ridgeBand = (
     .map(([x, y]) => `${x},${y + bottom}`)
     .join("L")}Z`;
 
-const CREST_LINE = ridgeLine(POINTS);
-const CREST_RIBBON = ridgeBand(POINTS, -5, 21);
-const HAZE_BAND = ridgeBand(BACK_POINTS, 0, 20);
+// La cinta entierra el borde del clip-path (situado a +20 unidades bajo la
+// cresta) con margen simétrico ≥ desplazamiento máximo del filtro: el borde
+// fijo nunca asoma entre los granos.
+const CREST = {
+  desktop: {
+    line: ridgeLine(POINTS),
+    ribbon: ridgeBand(POINTS, -8, 48),
+    haze: ridgeBand(BACK_POINTS, 0, 20),
+  },
+  mobile: {
+    line: ridgeLine(MOBILE_POINTS),
+    ribbon: ridgeBand(MOBILE_POINTS, -8, 48),
+    haze: ridgeBand(MOBILE_BACK_POINTS, 0, 20),
+  },
+} as const;
 
 export default function SectionDivider({ fill }: { fill: string }) {
   const rawId = useId();
@@ -101,6 +142,8 @@ export default function SectionDivider({ fill }: { fill: string }) {
   const lastNoiseXRef = useRef(0);
   const inViewRef = useRef(false);
   const reduced = useReducedMotion();
+  const isDesktop = useMediaQuery("(min-width: 640px)");
+  const shapes = isDesktop ? CREST.desktop : CREST.mobile;
 
   const { scrollY } = useScroll();
   const smoothVelocity = useSpring(useVelocity(scrollY), {
@@ -108,9 +151,10 @@ export default function SectionDivider({ fill }: { fill: string }) {
     stiffness: 400,
   });
 
-  // Falla base constante + impulso por velocidad de scroll.
+  // Falla base constante + impulso por velocidad de scroll. Tope en 44
+  // (±22px): nunca supera el margen de la cinta sobre el borde del clip.
   const erosion = useTransform(
-    () => 26 + Math.min(62, Math.abs(smoothVelocity.get()) * 0.055),
+    () => 24 + Math.min(20, Math.abs(smoothVelocity.get()) * 0.03),
   );
 
   const applyFilter = useCallback(
@@ -169,7 +213,7 @@ export default function SectionDivider({ fill }: { fill: string }) {
           cancelAnimationFrame(raf);
         }
       },
-      { rootMargin: "20% 0px 20% 0px" },
+      { rootMargin: "50% 0px 50% 0px" },
     );
     io.observe(target);
     return () => {
@@ -202,10 +246,17 @@ export default function SectionDivider({ fill }: { fill: string }) {
             result="img"
           />
           <feTile in="img" result="noise" />
+          {/* Contraste x2: satura el ruido hacia los extremos para que no
+              queden tramos "neutros" con el borde nítido (el máximo de
+              desplazamiento no cambia: el canal se recorta a [0,1]). */}
+          <feComponentTransfer in="noise" result="wind">
+            <feFuncR type="linear" slope="2" intercept="-0.5" />
+            <feFuncG type="linear" slope="2" intercept="-0.5" />
+          </feComponentTransfer>
           <feDisplacementMap
             ref={dispRef}
             in="SourceGraphic"
-            in2="noise"
+            in2="wind"
             scale="0"
             xChannelSelector="G"
             yChannelSelector="R"
@@ -215,16 +266,16 @@ export default function SectionDivider({ fill }: { fill: string }) {
 
       {/* Cordillera trasera: deriva pegada a la cresta, asomando tras los
           picos (se pinta antes que la cresta → queda detrás de la cinta) */}
-      <div className="absolute inset-x-0 top-0 h-16 overflow-hidden sm:h-28">
+      <div className="absolute inset-x-0 top-0 h-24 overflow-hidden sm:h-28">
         <svg
           ref={hazeRef}
           className="divider-back absolute left-0 top-0 h-full w-[200%]"
           viewBox="0 0 2880 120"
           preserveAspectRatio="none"
         >
-          <path d={HAZE_BAND} fill={fill} opacity="0.5" />
+          <path d={shapes.haze} fill={fill} opacity="0.5" />
           <path
-            d={HAZE_BAND}
+            d={shapes.haze}
             fill={fill}
             opacity="0.5"
             transform="translate(1440 0)"
@@ -235,13 +286,13 @@ export default function SectionDivider({ fill }: { fill: string }) {
       {/* Cresta: cinta + línea ember + pulso, alineadas con el clip-path */}
       <svg
         ref={crestRef}
-        className="absolute left-0 top-0 h-16 w-full sm:h-28"
+        className="absolute left-0 top-0 h-24 w-full sm:h-28"
         viewBox="0 0 1440 120"
         preserveAspectRatio="none"
       >
-        <path d={CREST_RIBBON} fill={fill} />
+        <path d={shapes.ribbon} fill={fill} />
         <path
-          d={CREST_LINE}
+          d={shapes.line}
           fill="none"
           stroke="#ff5b1f"
           strokeWidth="2"
@@ -250,7 +301,7 @@ export default function SectionDivider({ fill }: { fill: string }) {
         />
         <path
           className="divider-pulse"
-          d={CREST_LINE}
+          d={shapes.line}
           pathLength={100}
           fill="none"
           stroke="#ffa270"

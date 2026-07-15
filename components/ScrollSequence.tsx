@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useId, useRef, type ReactNode } from "react";
 import SectionDivider from "@/components/SectionDivider";
@@ -331,7 +331,7 @@ export default function ScrollSequence({
   // sección previa, no el fondo del body.
   if (!dividerFill) return scene;
   return (
-    <div className="relative -mt-16 sm:-mt-28">
+    <div className="relative -mt-24 sm:-mt-28">
       {scene}
       <SectionDivider fill={dividerFill} />
     </div>
