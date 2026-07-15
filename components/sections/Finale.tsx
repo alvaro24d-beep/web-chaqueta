@@ -1,4 +1,5 @@
 import ScrollSequence, { SeqStep } from "@/components/ScrollSequence";
+import Magnetic from "@/components/motion/Magnetic";
 import { SEQ_EPICO } from "@/lib/frames";
 
 export default function Finale() {
@@ -33,13 +34,15 @@ export default function Finale() {
         <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.25em] text-bone-dim">
           IVA incluido · Tallas XS–XXL
         </p>
-        <a
-          href="#comprar"
-          className="btn-ember mt-10 font-mono text-sm font-medium uppercase tracking-[0.22em]"
-        >
-          <span>Comprar ahora</span>
-          <span aria-hidden="true">→</span>
-        </a>
+        <Magnetic className="mt-10">
+          <a
+            href="#comprar"
+            className="btn-ember font-mono text-sm font-medium uppercase tracking-[0.22em]"
+          >
+            <span>Comprar ahora</span>
+            <span aria-hidden="true">→</span>
+          </a>
+        </Magnetic>
         <p className="mt-8 font-mono text-[10px] uppercase tracking-[0.22em] text-bone-dim sm:text-[11px]">
           Envío 24/48 h · Devolución 60 días · Garantía de por vida
         </p>

@@ -44,52 +44,6 @@ body {
   -webkit-text-stroke: 1.5px var(--color-coal);
 }
 
-/* ── Reveals de entrada (activados por IntersectionObserver) ─────────── */
-.reveal {
-  opacity: 0;
-  transform: translateY(30px);
-  transition:
-    opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1),
-    transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.in > .reveal {
-  opacity: 1;
-  transform: none;
-}
-
-.reveal-clip {
-  clip-path: inset(0 0 100% 0);
-  transform: translateY(14px);
-  transition:
-    clip-path 1.1s cubic-bezier(0.16, 1, 0.3, 1),
-    transform 1.1s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.in > .reveal-clip {
-  /* Insets negativos: sin recorte residual para tildes (Ñ) ni descendentes */
-  clip-path: inset(-15% 0 -15% 0);
-  transform: none;
-}
-
-/* ── Marquesina ──────────────────────────────────────────────────────── */
-.marquee {
-  overflow: hidden;
-  white-space: nowrap;
-}
-
-.marquee-track {
-  display: inline-flex;
-  width: max-content;
-  animation: marquee 24s linear infinite;
-}
-
-@keyframes marquee {
-  to {
-    transform: translateX(-50%);
-  }
-}
-
 /* ── Esquinas HUD tipo visor (4 corchetes con gradientes) ────────────── */
 .hud-corners {
   background-image: linear-gradient(currentColor, currentColor),
@@ -211,17 +165,8 @@ body {
     scroll-behavior: auto;
   }
 
-  .marquee-track,
   .scroll-cue::after,
   .rec-dot {
     animation: none;
-  }
-
-  .reveal,
-  .reveal-clip {
-    opacity: 1;
-    transform: none;
-    clip-path: none;
-    transition: none;
   }
 }

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Anton, Archivo, IBM_Plex_Mono } from "next/font/google";
 import SmoothScroll from "@/components/SmoothScroll";
+import MotionRoot from "@/components/motion/MotionRoot";
 import "./globals.css";
 
 const anton = Anton({
@@ -42,7 +43,7 @@ export default function RootLayout({
     >
       <body>
         <SmoothScroll />
-        {children}
+        <MotionRoot>{children}</MotionRoot>
       </body>
     </html>
   );

@@ -1,4 +1,6 @@
 import ScrollSequence, { SeqStep } from "@/components/ScrollSequence";
+import SplitLetters from "@/components/motion/SplitLetters";
+import { FadeUp } from "@/components/motion/reveals";
 import { SEQ_ANDANDO } from "@/lib/frames";
 
 export default function Hero() {
@@ -14,16 +16,28 @@ export default function Hero() {
         to={0.2}
         className="inset-0 flex flex-col items-center justify-center px-6 text-center"
       >
-        <p className="mb-6 font-mono text-[11px] uppercase tracking-[0.35em] text-olive sm:text-xs">
-          Vetta · Equipo de montaña
-        </p>
-        <h1 className="font-display uppercase leading-[0.85] text-[clamp(4.2rem,16vw,14rem)]">
-          Stratum<span className="text-outline">&nbsp;3L</span>
+        <FadeUp delay={0.25} y={18}>
+          <p className="mb-6 font-mono text-[11px] uppercase tracking-[0.35em] text-olive sm:text-xs">
+            Vetta · Equipo de montaña
+          </p>
+        </FadeUp>
+        <h1
+          aria-label="Stratum 3L"
+          className="font-display uppercase leading-[0.85] text-[clamp(4.2rem,16vw,14rem)]"
+        >
+          <SplitLetters text="Stratum" delay={0.45} />
+          <SplitLetters
+            text={" 3L"}
+            className="text-outline"
+            delay={0.85}
+          />
         </h1>
-        <p className="mt-7 max-w-xl text-balance text-base text-bone-dim sm:text-lg">
-          La shell de tres capas para quienes no consultan el parte antes de
-          decidir si salen.
-        </p>
+        <FadeUp delay={1.05} y={22}>
+          <p className="mt-7 max-w-xl text-balance text-base text-bone-dim sm:text-lg">
+            La shell de tres capas para quienes no consultan el parte antes de
+            decidir si salen.
+          </p>
+        </FadeUp>
       </SeqStep>
 
       <SeqStep
@@ -31,10 +45,12 @@ export default function Hero() {
         to={0.09}
         className="inset-x-0 bottom-7 flex flex-col items-center gap-3"
       >
-        <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-bone-dim">
-          Desliza
-        </span>
-        <span className="scroll-cue" />
+        <FadeUp delay={1.4} y={12} className="flex flex-col items-center gap-3">
+          <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-bone-dim">
+            Desliza
+          </span>
+          <span className="scroll-cue" />
+        </FadeUp>
       </SeqStep>
 
       <SeqStep

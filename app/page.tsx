@@ -1,4 +1,6 @@
 import Nav from "@/components/Nav";
+import BackToTop from "@/components/motion/BackToTop";
+import ScrollProgress from "@/components/motion/ScrollProgress";
 import Hero from "@/components/sections/Hero";
 import Manifesto from "@/components/sections/Manifesto";
 import Details from "@/components/sections/Details";
@@ -11,6 +13,7 @@ import Footer from "@/components/sections/Footer";
 export default function Home() {
   return (
     <div id="top">
+      <ScrollProgress />
       <Nav />
       <main>
         <Hero />
@@ -22,6 +25,7 @@ export default function Home() {
         <Finale />
       </main>
       <Footer />
+      <BackToTop />
       <div className="grain" aria-hidden="true" />
     </div>
   );

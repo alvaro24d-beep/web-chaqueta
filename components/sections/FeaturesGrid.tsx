@@ -1,4 +1,10 @@
-import Reveal from "@/components/Reveal";
+import TiltCard from "@/components/motion/TiltCard";
+import {
+  ClipReveal,
+  FadeUp,
+  StaggerGroup,
+  StaggerItem,
+} from "@/components/motion/reveals";
 
 const FEATURES = [
   {
@@ -42,30 +48,29 @@ export default function FeaturesGrid() {
     >
       <div className="mx-auto max-w-7xl">
         <div className="mb-20 grid items-end gap-10 md:grid-cols-[1.4fr_1fr]">
-          <Reveal variant="clip">
+          <ClipReveal>
             <p className="mb-5 font-mono text-[11px] uppercase tracking-[0.3em] text-moss">
               Sin adornos — solo ingeniería
             </p>
             <h2 className="font-display uppercase leading-[0.88] text-[clamp(3rem,9vw,8rem)]">
               Pro <span className="text-outline-dark">de serie</span>
             </h2>
-          </Reveal>
-          <Reveal delay={150}>
+          </ClipReveal>
+          <FadeUp delay={0.15}>
             <p className="max-w-md text-lg leading-relaxed text-coal/70">
               Nada de versiones «pro» que cuestan aparte. Cada STRATUM 3L sale
               de fábrica con todo lo que la montaña va a pedirle.
             </p>
-          </Reveal>
+          </FadeUp>
         </div>
 
-        <ul className="grid gap-px border border-coal/15 bg-coal/15 sm:grid-cols-2 lg:grid-cols-3">
-          {FEATURES.map((f, i) => (
-            <li key={f.index} className="group bg-bone">
-              <Reveal
-                delay={(i % 3) * 90}
-                className="h-full"
-                innerClassName="h-full"
-              >
+        <StaggerGroup
+          as="ul"
+          className="grid gap-px border border-coal/15 bg-coal/15 sm:grid-cols-2 lg:grid-cols-3"
+        >
+          {FEATURES.map((f) => (
+            <StaggerItem key={f.index} as="li" className="group bg-bone">
+              <TiltCard className="h-full">
                 <div className="flex h-full flex-col p-8 transition-colors duration-500 group-hover:bg-coal group-hover:text-bone sm:p-10">
                   <p className="font-display text-5xl leading-none text-coal/15 transition-colors duration-500 group-hover:text-ember sm:text-6xl">
                     {f.index}
@@ -77,10 +82,10 @@ export default function FeaturesGrid() {
                     {f.body}
                   </p>
                 </div>
-              </Reveal>
-            </li>
+              </TiltCard>
+            </StaggerItem>
           ))}
-        </ul>
+        </StaggerGroup>
       </div>
     </section>
   );

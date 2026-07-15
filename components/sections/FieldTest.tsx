@@ -1,4 +1,6 @@
-import Reveal from "@/components/Reveal";
+import Parallax from "@/components/motion/Parallax";
+import WordReveal from "@/components/motion/WordReveal";
+import { ClipReveal, FadeUp } from "@/components/motion/reveals";
 import { VIDEO_SENDERISTA } from "@/lib/frames";
 
 export default function FieldTest() {
@@ -10,18 +12,18 @@ export default function FieldTest() {
     >
       <div className="mx-auto max-w-6xl">
         <div className="mb-16">
-          <Reveal variant="clip">
+          <ClipReveal>
             <p className="mb-5 font-mono text-[11px] uppercase tracking-[0.3em] text-moss">
               Field test — Pirineo aragonés · 14 días
             </p>
             <h2 className="font-display uppercase leading-[0.88] text-[clamp(3rem,9vw,8rem)]">
               Probada <span className="text-outline-dark">donde duele</span>
             </h2>
-          </Reveal>
+          </ClipReveal>
         </div>
 
-        <Reveal delay={120}>
-          <figure className="mx-auto max-w-5xl">
+        <figure className="mx-auto max-w-5xl">
+          <Parallax distance={55}>
             <div className="relative border-[3px] border-coal bg-coal">
               <video
                 className="block aspect-video w-full object-cover"
@@ -50,22 +52,22 @@ export default function FieldTest() {
                 </div>
               </div>
             </div>
-            <figcaption className="mt-10 grid gap-8 md:grid-cols-[1.5fr_1fr] md:gap-16">
-              <blockquote className="text-xl leading-relaxed text-coal/85 sm:text-2xl">
-                «Dos horas de aguanieve en la cresta y por dentro, seco. No
-                pensé en la chaqueta ni una vez — que es exactamente lo que le
-                pides a una shell.»
-              </blockquote>
-              <p className="self-end font-mono text-[11px] uppercase leading-loose tracking-[0.25em] text-moss">
+          </Parallax>
+          <figcaption className="mt-10 grid gap-8 md:grid-cols-[1.5fr_1fr] md:gap-16">
+            <blockquote className="text-xl leading-relaxed text-coal/85 sm:text-2xl">
+              <WordReveal text="«Dos horas de aguanieve en la cresta y por dentro, seco. No pensé en la chaqueta ni una vez — que es exactamente lo que le pides a una shell.»" />
+            </blockquote>
+            <FadeUp delay={0.2} className="self-end">
+              <p className="font-mono text-[11px] uppercase leading-loose tracking-[0.25em] text-moss">
                 — Ibon Etxarri
                 <br />
                 Guía de alta montaña UIAGM
                 <br />
                 14 días · 61.000 m D+
               </p>
-            </figcaption>
-          </figure>
-        </Reveal>
+            </FadeUp>
+          </figcaption>
+        </figure>
       </div>
     </section>
   );
