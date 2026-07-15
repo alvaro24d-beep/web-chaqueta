@@ -7,6 +7,7 @@ import {
   useScroll,
 } from "framer-motion";
 import { useState } from "react";
+import { EASE_OUT } from "@/lib/motion";
 
 /** Botón flotante que aparece pasado el hero y sale animado al volver arriba. */
 export default function BackToTop() {
@@ -26,7 +27,7 @@ export default function BackToTop() {
           exit={{ opacity: 0, y: 24, scale: 0.85 }}
           whileHover={{ y: -4 }}
           whileTap={{ scale: 0.9 }}
-          transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: 0.35, ease: EASE_OUT }}
           className="fixed bottom-6 right-6 z-[85] flex h-12 w-12 items-center justify-center border border-white font-mono text-base mix-blend-difference text-white"
         >
           ↑

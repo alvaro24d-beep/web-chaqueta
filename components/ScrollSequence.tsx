@@ -187,9 +187,11 @@ export default function ScrollSequence({
           );
         }
         const e = easeOut(s.anim);
-        const x = s.vec.x * (1 - e);
-        const y = s.vec.y * (1 - e);
-        const sc = 1 + (s.vec.s - 1) * (1 - e);
+        // Movimiento reducido: solo fundido de opacidad, sin desplazamientos.
+        const move = reducedMotion ? 0 : 1 - e;
+        const x = s.vec.x * move;
+        const y = s.vec.y * move;
+        const sc = 1 + (s.vec.s - 1) * move;
         s.el.style.opacity = e.toFixed(3);
         s.el.style.transform = `translate3d(${x.toFixed(2)}px, ${y.toFixed(2)}px, 0) scale(${sc.toFixed(4)})`;
         s.el.style.visibility = e <= 0.001 ? "hidden" : "visible";

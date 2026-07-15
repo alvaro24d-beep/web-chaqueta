@@ -2,6 +2,7 @@
 
 import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 import type { PointerEvent, ReactNode } from "react";
+import { useMediaQuery } from "@/lib/useMediaQuery";
 
 /** Tarjeta con inclinación 3D que sigue al puntero (springs sobre motion values). */
 export default function TiltCard({
@@ -18,8 +19,11 @@ export default function TiltCard({
   const spring = { stiffness: 260, damping: 22, mass: 0.6 };
   const rotateX = useSpring(useTransform(py, [0, 1], [max, -max]), spring);
   const rotateY = useSpring(useTransform(px, [0, 1], [-max, max]), spring);
+  // En táctil los pointermove del scroll inclinarían la tarjeta (falso hover).
+  const finePointer = useMediaQuery("(hover: hover) and (pointer: fine)");
 
   const onPointerMove = (e: PointerEvent<HTMLDivElement>) => {
+    if (!finePointer) return;
     const rect = e.currentTarget.getBoundingClientRect();
     px.set((e.clientX - rect.left) / rect.width);
     py.set((e.clientY - rect.top) / rect.height);

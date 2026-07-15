@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   frameProgress,
   onFrameLoad,
@@ -9,6 +9,7 @@ import {
   releasePage,
 } from "@/lib/frameStore";
 import { ALL_SEQUENCES } from "@/lib/frames";
+import { EASE_OUT } from "@/lib/motion";
 
 /**
  * Pantalla de carga: descarga TODOS los fotogramas de las secuencias antes
@@ -18,17 +19,23 @@ import { ALL_SEQUENCES } from "@/lib/frames";
 export default function Preloader() {
   const [pct, setPct] = useState(0);
   const [done, setDone] = useState(false);
+  const beatRef = useRef(false);
 
   useEffect(() => {
     preloadSequences(ALL_SEQUENCES);
 
+    let beatTimer: ReturnType<typeof setTimeout> | undefined;
     const update = () => {
       const { loaded, total } = frameProgress();
       const p = total > 0 ? loaded / total : 1;
       setPct(Math.round(p * 100));
-      if (total > 0 && loaded >= total) {
-        setDone(true);
-        releasePage();
+      if (total > 0 && loaded >= total && !beatRef.current) {
+        // Beat en el 100%: la cifra se clava un instante antes del barrido.
+        beatRef.current = true;
+        beatTimer = setTimeout(() => {
+          setDone(true);
+          releasePage();
+        }, 450);
       }
     };
     update();
@@ -44,6 +51,7 @@ export default function Preloader() {
     return () => {
       unsubscribe();
       clearTimeout(failsafe);
+      if (beatTimer) clearTimeout(beatTimer);
     };
   }, []);
 
@@ -61,8 +69,9 @@ export default function Preloader() {
     <AnimatePresence>
       {!done && (
         <motion.div
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+          initial={{ clipPath: "inset(0% 0% 0% 0%)" }}
+          exit={{ clipPath: "inset(0% 0% 100% 0%)" }}
+          transition={{ duration: 0.8, ease: EASE_OUT }}
           className="fixed inset-0 z-[95] flex flex-col items-center justify-center bg-coal"
           aria-label="Cargando"
         >

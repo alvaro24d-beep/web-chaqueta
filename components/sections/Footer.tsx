@@ -72,6 +72,7 @@ export default function Footer() {
                         <motion.a
                           href="#top"
                           whileHover={{ x: 6 }}
+                          whileTap={{ scale: 0.97 }}
                           transition={{ type: "spring", stiffness: 400, damping: 24 }}
                           className="inline-block text-sm text-bone-dim transition-colors hover:text-bone"
                         >

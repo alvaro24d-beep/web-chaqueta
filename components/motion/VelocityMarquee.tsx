@@ -3,6 +3,7 @@
 import {
   motion,
   useAnimationFrame,
+  useInView,
   useMotionValue,
   useReducedMotion,
   useScroll,
@@ -43,10 +44,13 @@ export default function VelocityMarquee({
   });
   const direction = useRef(1);
   const reduced = useReducedMotion();
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  // Sin trabajo fuera de pantalla: el bucle solo corre con la banda visible.
+  const inView = useInView(containerRef);
   const x = useTransform(baseX, (v) => `${v}%`);
 
   useAnimationFrame((_, delta) => {
-    if (reduced) return;
+    if (reduced || !inView) return;
     let moveBy = direction.current * baseVelocity * (delta / 1000);
     const factor = velocityFactor.get();
     if (factor < 0) direction.current = -1;
@@ -56,7 +60,10 @@ export default function VelocityMarquee({
   });
 
   return (
-    <div className={`overflow-hidden whitespace-nowrap ${className}`}>
+    <div
+      ref={containerRef}
+      className={`overflow-hidden whitespace-nowrap ${className}`}
+    >
       <motion.div className="flex w-max" style={{ x }}>
         {[0, 1, 2, 3].map((copy) => (
           <div key={copy} aria-hidden={copy > 0} className="flex shrink-0">

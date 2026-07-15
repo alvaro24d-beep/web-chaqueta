@@ -22,7 +22,7 @@ export default function DragSticker() {
         drag
         dragConstraints={area}
         dragElastic={0.18}
-        initial={{ rotate: -30, scale: 0, opacity: 0 }}
+        initial={{ rotate: -30, scale: 0.6, opacity: 0 }}
         whileInView={{ rotate: -12, scale: 1, opacity: 1 }}
         viewport={{ once: true, amount: 0.5 }}
         transition={{ type: "spring", stiffness: 260, damping: 17, delay: 0.35 }}

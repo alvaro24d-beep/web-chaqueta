@@ -19,10 +19,12 @@ import {
   useEffect,
   useId,
   useRef,
+  useState,
   type ReactNode,
 } from "react";
 import SectionDivider from "@/components/SectionDivider";
 import SandFilter from "@/components/motion/SandFilter";
+import { EASE_OUT } from "@/lib/motion";
 import { useSceneHeightVh } from "@/lib/useSceneHeight";
 
 /**
@@ -40,6 +42,14 @@ export function useSceneProgress(): MotionValue<number> {
     throw new Error("Shot/ScrubCounter deben usarse dentro de <PinScene>");
   }
   return value;
+}
+
+/** true cuando el progreso de la escena ha cruzado el umbral (reversible). */
+export function useSceneCue(threshold: number): boolean {
+  const progress = useSceneProgress();
+  const [passed, setPassed] = useState(() => progress.get() >= threshold);
+  useMotionValueEvent(progress, "change", (p) => setPassed(p >= threshold));
+  return passed;
 }
 
 export function PinScene({
@@ -83,7 +93,7 @@ export function PinScene({
 
 export type ShotEdge = "left" | "right" | "top" | "bottom" | "zoom" | "none";
 
-const EASE = cubicBezier(0.16, 1, 0.3, 1);
+const EASE = cubicBezier(...EASE_OUT);
 const DIST = 130;
 
 const edgeOffset = (edge: ShotEdge, isExit: boolean) => {

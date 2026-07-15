@@ -2,6 +2,7 @@
 
 import { motion, useMotionValue, useSpring } from "framer-motion";
 import type { PointerEvent, ReactNode } from "react";
+import { useMediaQuery } from "@/lib/useMediaQuery";
 
 /** Envoltorio magnético: el contenido persigue al cursor con muelles. */
 export default function Magnetic({
@@ -18,8 +19,11 @@ export default function Magnetic({
   const spring = { stiffness: 180, damping: 14, mass: 0.25 };
   const x = useSpring(mx, spring);
   const y = useSpring(my, spring);
+  // En táctil el "magnetismo" haría saltar el botón al tocarlo (falso hover).
+  const finePointer = useMediaQuery("(hover: hover) and (pointer: fine)");
 
   const onPointerMove = (e: PointerEvent<HTMLDivElement>) => {
+    if (!finePointer) return;
     const rect = e.currentTarget.getBoundingClientRect();
     mx.set((e.clientX - (rect.left + rect.width / 2)) * strength);
     my.set((e.clientY - (rect.top + rect.height / 2)) * strength);

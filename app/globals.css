@@ -17,6 +17,11 @@
   --font-mono: var(--font-plex);
 }
 
+:root {
+  /* Token de easing de toda la web (en TS: lib/motion.ts) */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
 html {
   scroll-behavior: smooth;
 }
@@ -135,7 +140,7 @@ body {
   inset: 0;
   background: var(--color-bone);
   transform: translateY(101%);
-  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.3s var(--ease-out);
   z-index: -1;
 }
 

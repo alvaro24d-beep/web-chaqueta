@@ -1,12 +1,37 @@
 "use client";
 
-import { motion, useTransform } from "framer-motion";
+import {
+  motion,
+  useInView,
+  useReducedMotion,
+  useTransform,
+} from "framer-motion";
+import { useEffect, useRef, useState } from "react";
 import {
   PinScene,
   Shot,
   useSceneProgress,
 } from "@/components/motion/PinScene";
 import { VIDEO_SENDERISTA } from "@/lib/frames";
+
+/** Altímetro del HUD que "tica" mientras graba — el visor se siente vivo. */
+function AltTicker() {
+  const ref = useRef<HTMLSpanElement | null>(null);
+  const inView = useInView(ref);
+  const reduced = useReducedMotion();
+  const [alt, setAlt] = useState(2847);
+
+  useEffect(() => {
+    if (!inView || reduced) return;
+    const id = setInterval(
+      () => setAlt(2845 + Math.floor(Math.random() * 5)),
+      1900,
+    );
+    return () => clearInterval(id);
+  }, [inView, reduced]);
+
+  return <span ref={ref}>Alt {alt.toLocaleString("es-ES")} m</span>;
+}
 
 /** El vídeo emerge de lejos y crece hasta protagonizar el plano. */
 function VideoLayer() {
@@ -46,7 +71,7 @@ function VideoLayer() {
           </div>
           <div className="absolute inset-x-8 bottom-7 flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.25em] sm:text-[11px]">
             <span>Stratum 3L</span>
-            <span>Alt 2.847 m</span>
+            <AltTicker />
           </div>
         </div>
       </motion.div>

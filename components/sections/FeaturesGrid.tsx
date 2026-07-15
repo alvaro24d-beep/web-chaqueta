@@ -1,7 +1,8 @@
-"use client";
+﻿"use client";
 
 import { motion, useScroll, useTransform } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
+import { useMediaQuery } from "@/lib/useMediaQuery";
 import SectionDivider from "@/components/SectionDivider";
 import SandText from "@/components/motion/SandText";
 import TiltCard from "@/components/motion/TiltCard";
@@ -72,6 +73,53 @@ export default function FeaturesGrid() {
 
   const x = useTransform(scrollYProgress, [0.04, 0.96], [0, -maxShift]);
   const barScaleX = useTransform(scrollYProgress, [0.04, 0.96], [0, 1]);
+  // useMediaQuery (useSyncExternalStore) y no useReducedMotion: el layout
+  // cambia de árbol entero y debe hidratar con el snapshot del servidor.
+  const reduced = useMediaQuery("(prefers-reduced-motion: reduce)");
+
+  // Movimiento reducido: nada de travelling lateral — grid vertical estático.
+  if (reduced) {
+    return (
+      <section
+        id="pro"
+        aria-label="Características pro"
+        className="relative bg-bone px-6 py-28 text-coal sm:px-10 sm:py-36"
+      >
+        <div className="mx-auto max-w-7xl">
+          <div className="mb-16 max-w-2xl">
+            <p className="mb-5 font-mono text-[11px] uppercase tracking-[0.3em] text-moss">
+              Sin adornos — solo ingeniería
+            </p>
+            <h2 className="font-display uppercase leading-[0.88] text-[clamp(3rem,7.5vw,7rem)]">
+              Pro <span className="text-outline-dark">de serie</span>
+            </h2>
+            <p className="mt-8 max-w-md text-lg leading-relaxed text-coal/70">
+              Nada de versiones «pro» que cuestan aparte. Cada STRATUM 3L sale
+              de fábrica con todo lo que la montaña va a pedirle.
+            </p>
+          </div>
+          <ul className="grid gap-px border border-coal/15 bg-coal/15 sm:grid-cols-2 lg:grid-cols-3">
+            {FEATURES.map((f) => (
+              <li key={f.index} className="bg-bone">
+                <div className="flex h-full flex-col p-8 sm:p-10">
+                  <p className="font-display text-6xl leading-none text-coal/15 sm:text-7xl">
+                    {f.index}
+                  </p>
+                  <h3 className="mb-3 mt-8 font-display text-2xl uppercase tracking-wide sm:text-3xl">
+                    {f.title}
+                  </h3>
+                  <p className="text-sm leading-relaxed text-coal/65 sm:text-base">
+                    {f.body}
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <SectionDivider fill="#e8e5da" />
+      </section>
+    );
+  }
 
   return (
     <section
@@ -116,14 +164,14 @@ export default function FeaturesGrid() {
                   className="h-full"
                   innerClassName="h-full"
                 >
-                  <div className="flex h-full min-h-[52vh] flex-col p-8 transition-colors duration-500 group-hover:bg-coal group-hover:text-bone sm:p-10">
-                    <p className="font-display text-6xl leading-none text-coal/15 transition-colors duration-500 group-hover:text-ember sm:text-7xl">
+                  <div className="flex h-full min-h-[52vh] flex-col p-8 transition-colors duration-250 group-hover:bg-coal group-hover:text-bone sm:p-10">
+                    <p className="font-display text-6xl leading-none text-coal/15 transition-colors duration-250 group-hover:text-ember sm:text-7xl">
                       {f.index}
                     </p>
                     <h3 className="mb-3 mt-auto font-display text-2xl uppercase tracking-wide sm:text-3xl">
                       {f.title}
                     </h3>
-                    <p className="text-sm leading-relaxed text-coal/65 transition-colors duration-500 group-hover:text-bone/70 sm:text-base">
+                    <p className="text-sm leading-relaxed text-coal/65 transition-colors duration-250 group-hover:text-bone/70 sm:text-base">
                       {f.body}
                     </p>
                   </div>

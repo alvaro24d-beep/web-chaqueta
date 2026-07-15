@@ -10,8 +10,7 @@ import {
 import { useEffect, useId, useRef, type ReactNode } from "react";
 import SandFilter from "@/components/motion/SandFilter";
 import { usePageReady } from "@/lib/frameStore";
-
-const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
+import { EASE_OUT as EASE } from "@/lib/motion";
 
 type FilterNodes = {
   disp: Element | null;
