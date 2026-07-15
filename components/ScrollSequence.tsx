@@ -316,6 +316,7 @@ export default function ScrollSequence({
       <div ref={stickyRef} className="sticky top-0 h-screen overflow-hidden">
         <canvas
           ref={canvasRef}
+          data-seq-canvas
           aria-hidden="true"
           className="absolute inset-0 h-full w-full bg-coal"
         />
