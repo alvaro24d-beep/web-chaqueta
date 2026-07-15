@@ -5,23 +5,20 @@ import { useEffect, useRef } from "react";
 import { useMediaQuery } from "@/lib/useMediaQuery";
 
 /**
- * Frontera de sección viva, pintada en <canvas>. Nada de filtros SVG: los
- * filtros CSS referenciados sufren bugs de invalidación/composición en
- * Chromium (bindings de feImage congelados, desplazamientos que dejan de
- * renderizarse junto a clip-paths...) que causaban la "línea lisa"
- * intermitente. Aquí controlamos cada frame:
+ * Frontera de sección viva, pintada en <canvas> (nada de filtros SVG: sufren
+ * bugs de invalidación/composición en Chromium). Dos capas:
  *
- * - Cresta de montaña + cinta del color de la sección + cordillera de bruma
- *   + línea ember con pulso recorriéndola, dibujadas en un lienzo fuente.
- * - Falla: el lienzo se compone por rebanadas verticales desplazadas por un
- *   ruido determinista de dos octavas (trozos coherentes, sin parches
- *   calmados) que DERIVA en el tiempo y se amplifica con la velocidad de
- *   scroll.
- * - La cinta llega hasta el borde inferior (= top de la sección, misma
- *   tinta): no existe borde fijo que pueda asomar entre los granos.
+ * 1. BASE estática: banda sólida del color de la sección que CRUZA la
+ *    división (el lienzo se adentra TAIL px en la sección) con borde
+ *    inferior dentado — la línea de unión queda siempre tapada, pase lo
+ *    que pase con la falla, y sin aristas rectas.
+ * 2. CRESTA desgarrada: banda de cordillera + bruma + línea ember con pulso,
+ *    compuesta por rebanadas verticales desplazadas por ruido determinista
+ *    (deriva temporal + amplificación por velocidad de scroll). Sus valles
+ *    se asientan justo sobre la división; cuando un trozo salta, debajo
+ *    asoma la base — nunca la unión.
  *
- * Solo corre con la frontera a la vista (IntersectionObserver) y con
- * prefers-reduced-motion pinta la silueta estática.
+ * Solo corre con la frontera a la vista; reduced-motion = silueta estática.
  */
 
 const POINTS: ReadonlyArray<readonly [number, number]> = [
@@ -117,12 +114,8 @@ const N = 2048;
 const NOISE_BIG = makeNoise(N, 40, 123457);
 const NOISE_FINE = makeNoise(N, 9, 987651);
 
-/**
- * Distancia de los valles de la cresta a la división (px CSS): la cinta
- * sólida cubre ese tramo hasta el borde de la sección (misma tinta) y las
- * ondas quedan pegadas a la unión.
- */
-const GAP = 14;
+/** Cuánto se adentra el lienzo en la sección (px CSS). */
+const TAIL = 44;
 
 export default function SectionDivider({ fill }: { fill: string }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -148,7 +141,9 @@ export default function SectionDivider({ fill }: { fill: string }) {
     let dpr = 1;
     let head = 0;
     let crestH = 0;
-    let src: HTMLCanvasElement | null = null;
+    let divY = 0;
+    let srcCrest: HTMLCanvasElement | null = null;
+    let srcBase: HTMLCanvasElement | null = null;
     let raf = 0;
     let active = false;
 
@@ -177,14 +172,32 @@ export default function SectionDivider({ fill }: { fill: string }) {
       return len;
     };
 
-    // Lienzo fuente: la frontera nítida (se desgarra al componer).
-    const drawSource = (pulseT: number) => {
-      if (!src) return;
-      const s = src.getContext("2d");
+    // BASE estática: de justo bajo la cresta hasta un borde inferior dentado
+    // dentro de la sección — la división queda cruzada por banda sólida.
+    const drawBase = () => {
+      if (!srcBase) return;
+      const s = srcBase.getContext("2d");
+      if (!s) return;
+      s.clearRect(0, 0, W, H);
+      tracePath(s, pts, -2);
+      const SEGS = 14;
+      for (let i = SEGS; i >= 0; i--) {
+        const x = (i / SEGS) * W;
+        const jag = NOISE_FINE[(i * 137) & (N - 1)] * 8 * dpr;
+        s.lineTo(x, divY + 24 * dpr + jag);
+      }
+      s.closePath();
+      s.fillStyle = fill;
+      s.fill();
+    };
+
+    // CRESTA: bruma + banda de cordillera + línea ember + pulso (se desgarra).
+    const drawCrest = (pulseT: number) => {
+      if (!srcCrest) return;
+      const s = srcCrest.getContext("2d");
       if (!s) return;
       s.clearRect(0, 0, W, H);
 
-      // Cordillera de bruma tras la cresta
       s.globalAlpha = 0.5;
       tracePath(s, back, 0);
       for (let i = back.length - 1; i >= 0; i--) {
@@ -195,15 +208,14 @@ export default function SectionDivider({ fill }: { fill: string }) {
       s.fill();
       s.globalAlpha = 1;
 
-      // Cinta: de la cresta hasta el borde inferior (= top de la sección)
       tracePath(s, pts, -8);
-      s.lineTo(W, H);
-      s.lineTo(0, H);
+      for (let i = pts.length - 1; i >= 0; i--) {
+        s.lineTo(mapX(pts[i][0]), mapY(pts[i][1] + 12));
+      }
       s.closePath();
       s.fillStyle = fill;
       s.fill();
 
-      // Línea ember de la cresta
       tracePath(s, pts, 0);
       s.strokeStyle = "#ff5b1f";
       s.globalAlpha = 0.78;
@@ -211,7 +223,6 @@ export default function SectionDivider({ fill }: { fill: string }) {
       s.stroke();
       s.globalAlpha = 1;
 
-      // Pulso recorriendo la cresta
       const len = crestLength();
       tracePath(s, pts, 0);
       s.strokeStyle = "#ffa270";
@@ -222,11 +233,12 @@ export default function SectionDivider({ fill }: { fill: string }) {
       s.setLineDash([]);
     };
 
-    // Composición: rebanadas verticales desplazadas por el ruido derivante.
+    // Composición: base fija + cresta por rebanadas desplazadas por ruido.
     const render = (now: number) => {
-      if (!src) return;
-      drawSource((now / 6500) % 1);
+      if (!srcCrest || !srcBase) return;
+      drawCrest((now / 6500) % 1);
       ctx.clearRect(0, 0, W, H);
+      ctx.drawImage(srcBase, 0, 0);
       const v = Math.abs(smoothVelocity.get());
       const amp = (14 + Math.min(20, v * 0.03)) * dpr;
       const drift = (now / 1000) * 90;
@@ -235,15 +247,16 @@ export default function SectionDivider({ fill }: { fill: string }) {
         const u = (x / dpr + drift) & (N - 1);
         const n = 0.68 * NOISE_BIG[u] + 0.45 * NOISE_FINE[(u * 5 + 700) & (N - 1)];
         const dy = n * amp;
-        ctx.drawImage(src, x, 0, slice, H, x, dy, slice, H);
+        ctx.drawImage(srcCrest, x, 0, slice, H, x, dy, slice, H);
       }
     };
 
     const renderStatic = () => {
-      if (!src) return;
-      drawSource(0.35);
+      if (!srcCrest || !srcBase) return;
+      drawCrest(0.35);
       ctx.clearRect(0, 0, W, H);
-      ctx.drawImage(src, 0, 0);
+      ctx.drawImage(srcBase, 0, 0);
+      ctx.drawImage(srcCrest, 0, 0);
     };
 
     const resize = () => {
@@ -252,15 +265,19 @@ export default function SectionDivider({ fill }: { fill: string }) {
       dpr = Math.min(window.devicePixelRatio || 1, 1.5);
       W = Math.round(rect.width * dpr);
       H = Math.round(rect.height * dpr);
-      // Los valles de la cresta (y=70 del viewBox) quedan a GAP px del
-      // borde inferior (= división de secciones); el resto, aire arriba.
+      divY = H - TAIL * dpr;
+      // Los valles de la cresta (y=70) se asientan justo sobre la división.
       crestH = (isDesktop ? 112 : 96) * dpr;
-      head = H - GAP * dpr - (70 / 120) * crestH;
+      head = divY - 6 * dpr - (70 / 120) * crestH;
       canvas.width = W;
       canvas.height = H;
-      src = document.createElement("canvas");
-      src.width = W;
-      src.height = H;
+      srcCrest = document.createElement("canvas");
+      srcCrest.width = W;
+      srcCrest.height = H;
+      srcBase = document.createElement("canvas");
+      srcBase.width = W;
+      srcBase.height = H;
+      drawBase();
       if (reducedQuery) renderStatic();
       else render(performance.now());
     };
@@ -300,9 +317,11 @@ export default function SectionDivider({ fill }: { fill: string }) {
   }, [fill, isDesktop, reducedQuery, smoothVelocity]);
 
   return (
+    // top-11 + -translate-y-full: el lienzo se adentra TAIL px en la sección
+    // para que la banda base cruce la división y la falla se asiente en ella.
     <div
       aria-hidden="true"
-      className="pointer-events-none absolute inset-x-0 top-px z-10 h-[140px] -translate-y-full sm:h-[156px]"
+      className="pointer-events-none absolute inset-x-0 top-11 z-10 h-[150px] -translate-y-full sm:h-[166px]"
     >
       <canvas ref={canvasRef} className="block h-full w-full" />
     </div>
