@@ -58,6 +58,33 @@ body {
   -webkit-text-stroke: 1.5px var(--color-coal);
 }
 
+/* ── Separadores de sección (cordillera con paralaje en deriva) ──────── */
+.divider-front {
+  animation: divider-front 46s linear infinite;
+}
+
+.divider-back {
+  animation: divider-back 30s linear infinite;
+}
+
+@keyframes divider-front {
+  from {
+    transform: translateX(-50%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes divider-back {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
 /* ── Esquinas HUD tipo visor (4 corchetes con gradientes) ────────────── */
 .hud-corners {
   background-image: linear-gradient(currentColor, currentColor),
@@ -180,7 +207,9 @@ body {
   }
 
   .scroll-cue::after,
-  .rec-dot {
+  .rec-dot,
+  .divider-front,
+  .divider-back {
     animation: none;
   }
 }

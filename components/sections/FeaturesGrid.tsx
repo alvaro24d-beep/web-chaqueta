@@ -2,6 +2,7 @@
 
 import { motion, useScroll, useTransform } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
+import SectionDivider from "@/components/SectionDivider";
 import SandText from "@/components/motion/SandText";
 import TiltCard from "@/components/motion/TiltCard";
 import { useSceneHeightVh } from "@/lib/useSceneHeight";
@@ -141,6 +142,7 @@ export default function FeaturesGrid() {
           </div>
         </div>
       </div>
+      <SectionDivider fill="#e8e5da" />
     </section>
   );
 }

@@ -21,6 +21,7 @@ import {
   useRef,
   type ReactNode,
 } from "react";
+import SectionDivider from "@/components/SectionDivider";
 import SandFilter from "@/components/motion/SandFilter";
 import { useSceneHeightVh } from "@/lib/useSceneHeight";
 
@@ -45,12 +46,15 @@ export function PinScene({
   children,
   heightVh = 300,
   className = "",
+  dividerFill,
   id,
   ariaLabel,
 }: {
   children: ReactNode;
   heightVh?: number;
   className?: string;
+  /** Color de la cresta separadora que cuelga del borde superior. */
+  dividerFill?: string;
   id?: string;
   ariaLabel?: string;
 }) {
@@ -72,6 +76,7 @@ export function PinScene({
       <div className="sticky top-0 h-screen overflow-hidden">
         <SceneCtx.Provider value={scrollYProgress}>{children}</SceneCtx.Provider>
       </div>
+      {dividerFill && <SectionDivider fill={dividerFill} />}
     </section>
   );
 }

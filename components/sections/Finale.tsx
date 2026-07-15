@@ -8,6 +8,7 @@ export default function Finale() {
       id="comprar"
       frames={SEQ_EPICO}
       heightVh={300}
+      dividerFill="#0c0e09"
       ariaLabel="Comprar STRATUM 3L"
     >
       <SeqStep

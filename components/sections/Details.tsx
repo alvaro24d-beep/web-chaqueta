@@ -42,6 +42,7 @@ export default function Details() {
       id="detalles"
       frames={SEQ_CREMALLERA}
       heightVh={520}
+      dividerFill="#0c0e09"
       ariaLabel="Detalles construidos"
     >
       <SeqStep from={0} to={1} dir="left" className="left-6 top-24 sm:left-10">

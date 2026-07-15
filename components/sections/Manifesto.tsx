@@ -27,7 +27,12 @@ const MARQUEE = [
 
 export default function Manifesto() {
   return (
-    <PinScene heightVh={320} ariaLabel="Manifiesto" className="bg-coal">
+    <PinScene
+      heightVh={320}
+      ariaLabel="Manifiesto"
+      className="bg-coal"
+      dividerFill="#0c0e09"
+    >
       <DragSticker />
 
       {/* Plano 1 — sentencia */}

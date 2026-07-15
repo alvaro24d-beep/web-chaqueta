@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, type ReactNode } from "react";
+import SectionDivider from "@/components/SectionDivider";
 import SandFilter from "@/components/motion/SandFilter";
 import { getFrame, onFrameLoad, preloadSequences } from "@/lib/frameStore";
 import { useSceneHeightVh } from "@/lib/useSceneHeight";
@@ -23,6 +24,8 @@ type ScrollSequenceProps = {
   heightVh?: number;
   /** Punto focal horizontal 0..1 para el recorte tipo cover (0.5 = centrado). */
   focusX?: number;
+  /** Color de la cresta separadora que cuelga del borde superior. */
+  dividerFill?: string;
   id?: string;
   className?: string;
   ariaLabel?: string;
@@ -70,6 +73,7 @@ export default function ScrollSequence({
   frames,
   heightVh = 400,
   focusX = 0.5,
+  dividerFill,
   id,
   className = "",
   ariaLabel,
@@ -315,6 +319,7 @@ export default function ScrollSequence({
         />
         {children}
       </div>
+      {dividerFill && <SectionDivider fill={dividerFill} />}
     </section>
   );
 }

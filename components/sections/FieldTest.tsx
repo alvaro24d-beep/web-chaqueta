@@ -61,6 +61,7 @@ export default function FieldTest() {
       heightVh={260}
       ariaLabel="Field test"
       className="bg-bone text-coal"
+      dividerFill="#e8e5da"
     >
       {/* Plano 1 — el titular abre la escena y cede el sitio al vídeo */}
       <Shot

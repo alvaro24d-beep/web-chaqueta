@@ -7,6 +7,7 @@ export default function Orbit() {
       id="ajuste"
       frames={SEQ_CIRCULO}
       heightVh={400}
+      dividerFill="#0c0e09"
       ariaLabel="Ajuste y patronaje — vista 360 grados"
     >
       <SeqStep from={0} to={1} dir="left" className="left-6 top-24 sm:left-10">
