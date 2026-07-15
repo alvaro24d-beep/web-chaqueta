@@ -115,18 +115,27 @@ const ridgeBand = (
     .map(([x, y]) => `${x},${y + bottom}`)
     .join("L")}Z`;
 
-// La cinta entierra el borde del clip-path (situado a +20 unidades bajo la
-// cresta) con margen simétrico ≥ desplazamiento máximo del filtro: el borde
-// fijo nunca asoma entre los granos.
+/**
+ * Relleno desde la cresta hasta MÁS ALLÁ del borde inferior del contenedor
+ * (y=150 > 120 del viewBox): la arista inferior recta queda recortada por el
+ * overflow exactamente donde empieza la sección — misma tinta, costura
+ * invisible. No existe ningún borde fijo que pueda asomar entre los granos:
+ * la única frontera visible es la cinta erosionada.
+ */
+const ridgeFill = (
+  pts: ReadonlyArray<readonly [number, number]>,
+  top: number,
+) => `${ridgeLine(pts, top)}L1440,150L0,150Z`;
+
 const CREST = {
   desktop: {
     line: ridgeLine(POINTS),
-    ribbon: ridgeBand(POINTS, -8, 48),
+    ribbon: ridgeFill(POINTS, -8),
     haze: ridgeBand(BACK_POINTS, 0, 20),
   },
   mobile: {
     line: ridgeLine(MOBILE_POINTS),
-    ribbon: ridgeBand(MOBILE_POINTS, -8, 48),
+    ribbon: ridgeFill(MOBILE_POINTS, -8),
     haze: ridgeBand(MOBILE_BACK_POINTS, 0, 20),
   },
 } as const;
@@ -140,10 +149,26 @@ export default function SectionDivider({ fill }: { fill: string }) {
   const feImageRef = useRef<SVGFEImageElement | null>(null);
   const lastScaleRef = useRef(-1);
   const lastNoiseXRef = useRef(0);
+  const lastRebindRef = useRef(0);
   const inViewRef = useRef(false);
   const reduced = useReducedMotion();
   const isDesktop = useMediaQuery("(min-width: 640px)");
   const shapes = isDesktop ? CREST.desktop : CREST.mobile;
+
+  // Chromium resuelve el feImage del filtro de forma ASÍNCRONA: si el filtro
+  // se aplica antes de que la imagen esté lista, cachea el binding con ruido
+  // vacío (desplazamiento uniforme = borde liso) y las escrituras de
+  // atributos NO lo reparan. Reconstruir el binding con none → reflow → url
+  // sí lo repara SIEMPRE (verificado por bisección): se hace al activar y a
+  // cadencia durante la deriva.
+  const rebind = useCallback(() => {
+    for (const el of [hazeRef.current, crestRef.current]) {
+      if (!el) continue;
+      el.style.filter = "none";
+      void el.getBoundingClientRect();
+      el.style.filter = `url(#${filterId})`;
+    }
+  }, [filterId]);
 
   const { scrollY } = useScroll();
   const smoothVelocity = useSpring(useVelocity(scrollY), {
@@ -161,12 +186,14 @@ export default function SectionDivider({ fill }: { fill: string }) {
     (scale: number) => {
       if (scale >= 6) {
         dispRef.current?.setAttribute("scale", String(scale));
-      }
-      for (const el of [hazeRef.current, crestRef.current]) {
-        if (el) el.style.filter = scale >= 6 ? `url(#${filterId})` : "none";
+        rebind();
+      } else {
+        for (const el of [hazeRef.current, crestRef.current]) {
+          if (el) el.style.filter = "none";
+        }
       }
     },
-    [filterId],
+    [rebind],
   );
 
   useMotionValueEvent(erosion, "change", (v) => {
@@ -185,6 +212,11 @@ export default function SectionDivider({ fill }: { fill: string }) {
     const target = crestRef.current;
     if (!target || reduced) return;
 
+    // Precarga del ruido: con la imagen en caché, el re-binding del filtro
+    // resuelve en el mismo frame (sin fogonazos de ruido vacío).
+    const noiseImg = new Image();
+    noiseImg.src = "/sand-noise-edge.png";
+
     let raf = 0;
     const drift = (now: number) => {
       if (!inViewRef.current) return;
@@ -193,6 +225,12 @@ export default function SectionDivider({ fill }: { fill: string }) {
       if (x !== lastNoiseXRef.current) {
         lastNoiseXRef.current = x;
         feImageRef.current?.setAttribute("x", String(x));
+      }
+      // Re-binding a cadencia: repara cualquier binding congelado y hace
+      // visible la deriva aunque las escrituras de atributos no invaliden.
+      if (now - lastRebindRef.current > 180) {
+        lastRebindRef.current = now;
+        rebind();
       }
       raf = requestAnimationFrame(drift);
     };
@@ -220,12 +258,12 @@ export default function SectionDivider({ fill }: { fill: string }) {
       io.disconnect();
       cancelAnimationFrame(raf);
     };
-  }, [applyFilter, erosion, reduced]);
+  }, [applyFilter, erosion, rebind, reduced]);
 
   return (
     <div
       aria-hidden="true"
-      className="pointer-events-none absolute inset-x-0 top-0 z-10"
+      className="pointer-events-none absolute inset-x-0 top-px z-10 h-24 -translate-y-full overflow-hidden sm:h-28"
     >
       <svg width="0" height="0" className="absolute">
         <filter
@@ -236,9 +274,11 @@ export default function SectionDivider({ fill }: { fill: string }) {
           height="340%"
           colorInterpolationFilters="sRGB"
         >
+          {/* Ruido dedicado de fronteras (dos octavas, contraste pleno):
+              trozos coherentes que se desgarran, sin parches calmados. */}
           <feImage
             ref={feImageRef}
-            href="/sand-noise.png"
+            href="/sand-noise-edge.png"
             x="0"
             y="0"
             width="512"
@@ -266,27 +306,25 @@ export default function SectionDivider({ fill }: { fill: string }) {
 
       {/* Cordillera trasera: deriva pegada a la cresta, asomando tras los
           picos (se pinta antes que la cresta → queda detrás de la cinta) */}
-      <div className="absolute inset-x-0 top-0 h-24 overflow-hidden sm:h-28">
-        <svg
-          ref={hazeRef}
-          className="divider-back absolute left-0 top-0 h-full w-[200%]"
-          viewBox="0 0 2880 120"
-          preserveAspectRatio="none"
-        >
-          <path d={shapes.haze} fill={fill} opacity="0.5" />
-          <path
-            d={shapes.haze}
-            fill={fill}
-            opacity="0.5"
-            transform="translate(1440 0)"
-          />
-        </svg>
-      </div>
+      <svg
+        ref={hazeRef}
+        className="divider-back absolute left-0 top-0 h-full w-[200%]"
+        viewBox="0 0 2880 120"
+        preserveAspectRatio="none"
+      >
+        <path d={shapes.haze} fill={fill} opacity="0.5" />
+        <path
+          d={shapes.haze}
+          fill={fill}
+          opacity="0.5"
+          transform="translate(1440 0)"
+        />
+      </svg>
 
-      {/* Cresta: cinta + línea ember + pulso, alineadas con el clip-path */}
+      {/* Cresta: cinta (hasta fundirse con la sección) + línea ember + pulso */}
       <svg
         ref={crestRef}
-        className="absolute left-0 top-0 h-24 w-full sm:h-28"
+        className="absolute left-0 top-0 h-full w-full"
         viewBox="0 0 1440 120"
         preserveAspectRatio="none"
       >

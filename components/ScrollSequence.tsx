@@ -305,12 +305,12 @@ export default function ScrollSequence({
     };
   }, [frames, focusX]);
 
-  const scene = (
+  return (
     <section
       ref={sectionRef}
       id={id}
       aria-label={ariaLabel}
-      className={`relative ${dividerFill ? "ridge-clip" : ""} ${className}`}
+      className={`relative ${className}`}
       style={{ height: `${effectiveVh}vh` }}
     >
       <div ref={stickyRef} className="sticky top-0 h-screen overflow-hidden">
@@ -321,20 +321,8 @@ export default function ScrollSequence({
         />
         {children}
       </div>
+      {dividerFill && <SectionDivider fill={dividerFill} />}
     </section>
-  );
-
-  // La decoración de la frontera vive FUERA de la sección recortada
-  // (hermana en un wrapper): el clip-path se la comería si fuera hija.
-  // El margen negativo solapa la sección con la anterior justo la
-  // profundidad de la cresta: sobre los picos se ve contenido real de la
-  // sección previa, no el fondo del body.
-  if (!dividerFill) return scene;
-  return (
-    <div className="relative -mt-24 sm:-mt-28">
-      {scene}
-      <SectionDivider fill={dividerFill} />
-    </div>
   );
 }
 

@@ -90,12 +90,11 @@ export default function FeaturesGrid() {
   // Movimiento reducido: nada de travelling lateral — grid vertical estático.
   if (reduced) {
     return (
-      <div className="relative -mt-24 sm:-mt-28">
-        <section
-          id="pro"
-          aria-label="Características pro"
-          className="ridge-clip relative bg-bone px-6 py-28 text-coal sm:px-10 sm:py-36"
-        >
+      <section
+        id="pro"
+        aria-label="Características pro"
+        className="relative bg-bone px-6 py-28 text-coal sm:px-10 sm:py-36"
+      >
         <div className="mx-auto max-w-7xl">
           <div className="mb-16 max-w-2xl">
             <p className="mb-5 font-mono text-[11px] uppercase tracking-[0.3em] text-moss">
@@ -127,19 +126,17 @@ export default function FeaturesGrid() {
             ))}
           </ul>
         </div>
-        </section>
         <SectionDivider fill="#e8e5da" />
-      </div>
+      </section>
     );
   }
 
   return (
-    <div className="relative -mt-24 sm:-mt-28">
     <section
       ref={sectionRef}
       id="pro"
       aria-label="Características pro"
-      className="ridge-clip relative bg-bone text-coal"
+      className="relative bg-bone text-coal"
       style={{ height: `${effectiveVh}vh` }}
     >
       <div className="sticky top-0 flex h-screen flex-col justify-center overflow-hidden">
@@ -208,8 +205,7 @@ export default function FeaturesGrid() {
           </div>
         </motion.div>
       </div>
+      <SectionDivider fill="#e8e5da" />
     </section>
-    <SectionDivider fill="#e8e5da" />
-    </div>
   );
 }
