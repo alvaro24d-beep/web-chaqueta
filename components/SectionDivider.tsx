@@ -115,11 +115,13 @@ const NOISE_BIG = makeNoise(N, 40, 123457);
 const NOISE_FINE = makeNoise(N, 9, 987651);
 
 /**
- * Cuánto se adentra el lienzo en la sección (px CSS). Ajustado: la banda
- * base cruza la división con solo ~8-13px para que el vídeo/contenido de la
- * sección empiece justo después de la falla.
+ * Cuánto se adentra el lienzo en la sección (px CSS): la banda base cruza
+ * la división con ~8-13px sólidos y, por debajo, la falla DECAE sobre el
+ * contenido con un degradado y escombros de granos — el arranque oscuro de
+ * los vídeos y el viñeteado del fotograma quedan integrados en la falla en
+ * vez de leerse como una franja negra vacía.
  */
-const TAIL = 20;
+const TAIL = 96;
 
 export default function SectionDivider({ fill }: { fill: string }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -178,11 +180,33 @@ export default function SectionDivider({ fill }: { fill: string }) {
 
     // BASE estática: de justo bajo la cresta hasta un borde inferior dentado
     // dentro de la sección — la división queda cruzada por banda sólida.
+    // Por debajo, decaimiento: degradado + escombros de granos que se
+    // disuelven sobre el contenido de la sección.
     const drawBase = () => {
       if (!srcBase) return;
       const s = srcBase.getContext("2d");
       if (!s) return;
       s.clearRect(0, 0, W, H);
+
+      const grad = s.createLinearGradient(0, divY, 0, divY + 72 * dpr);
+      grad.addColorStop(0, fill);
+      grad.addColorStop(1, `${fill}00`);
+      s.fillStyle = grad;
+      s.fillRect(0, divY, W, 72 * dpr);
+
+      for (let i = 0; i < 170; i++) {
+        const nx = NOISE_FINE[(i * 53) & (N - 1)] * 0.5 + 0.5;
+        const ny = NOISE_BIG[(i * 97 + 300) & (N - 1)] * 0.5 + 0.5;
+        const depth = ny * ny;
+        const x = nx * W;
+        const y = divY + 10 * dpr + depth * 76 * dpr;
+        const sz = (1.5 + ((i * 7) % 5)) * dpr;
+        s.globalAlpha = 0.9 * (1 - depth);
+        s.fillStyle = i % 9 === 0 ? "#ff5b1f" : fill;
+        s.fillRect(x, y, sz, sz);
+      }
+      s.globalAlpha = 1;
+
       tracePath(s, pts, -2);
       const SEGS = 14;
       for (let i = SEGS; i >= 0; i--) {
@@ -321,11 +345,11 @@ export default function SectionDivider({ fill }: { fill: string }) {
   }, [fill, isDesktop, reducedQuery, smoothVelocity]);
 
   return (
-    // top-5 + -translate-y-full: el lienzo se adentra TAIL px en la sección
-    // para que la banda base cruce la división y la falla se asiente en ella.
+    // top-24 + -translate-y-full: el lienzo se adentra TAIL px en la sección
+    // para que la banda base cruce la división y la falla decaiga sobre ella.
     <div
       aria-hidden="true"
-      className="pointer-events-none absolute inset-x-0 top-5 z-10 h-[150px] -translate-y-full sm:h-[166px]"
+      className="pointer-events-none absolute inset-x-0 top-24 z-10 h-[226px] -translate-y-full sm:h-[242px]"
     >
       <canvas ref={canvasRef} className="block h-full w-full" />
     </div>
