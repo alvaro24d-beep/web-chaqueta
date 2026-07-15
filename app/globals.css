@@ -63,37 +63,6 @@ body {
   -webkit-text-stroke: 1.5px var(--color-coal);
 }
 
-/* ── Frontera de sección (cresta que divide, bruma y pulso) ──────────────
-   .ridge-clip recorta el borde superior de la sección con la cresta: arriba
-   se ve la sección anterior y abajo esta, tocándose en los picos. Los
-   puntos son los mismos de SectionDivider.tsx escalados a 64px (móvil) y
-   112px (sm), a juego con las alturas h-16 / sm:h-28 de la decoración. */
-.divider-back {
-  animation: divider-back 30s linear infinite;
-}
-
-.divider-pulse {
-  animation: divider-pulse 6.5s linear infinite;
-}
-
-@keyframes divider-back {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(-50%);
-  }
-}
-
-@keyframes divider-pulse {
-  from {
-    stroke-dashoffset: 100;
-  }
-  to {
-    stroke-dashoffset: 0;
-  }
-}
-
 /* ── Esquinas HUD tipo visor (4 corchetes con gradientes) ────────────── */
 .hud-corners {
   background-image: linear-gradient(currentColor, currentColor),
@@ -216,9 +185,7 @@ body {
   }
 
   .scroll-cue::after,
-  .rec-dot,
-  .divider-back,
-  .divider-pulse {
+  .rec-dot {
     animation: none;
   }
 }
