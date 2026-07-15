@@ -114,8 +114,12 @@ const N = 2048;
 const NOISE_BIG = makeNoise(N, 40, 123457);
 const NOISE_FINE = makeNoise(N, 9, 987651);
 
-/** Cuánto se adentra el lienzo en la sección (px CSS). */
-const TAIL = 44;
+/**
+ * Cuánto se adentra el lienzo en la sección (px CSS). Ajustado: la banda
+ * base cruza la división con solo ~8-13px para que el vídeo/contenido de la
+ * sección empiece justo después de la falla.
+ */
+const TAIL = 20;
 
 export default function SectionDivider({ fill }: { fill: string }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -183,8 +187,8 @@ export default function SectionDivider({ fill }: { fill: string }) {
       const SEGS = 14;
       for (let i = SEGS; i >= 0; i--) {
         const x = (i / SEGS) * W;
-        const jag = NOISE_FINE[(i * 137) & (N - 1)] * 8 * dpr;
-        s.lineTo(x, divY + 24 * dpr + jag);
+        const jag = NOISE_FINE[(i * 137) & (N - 1)] * 5 * dpr;
+        s.lineTo(x, divY + 8 * dpr + jag);
       }
       s.closePath();
       s.fillStyle = fill;
@@ -317,11 +321,11 @@ export default function SectionDivider({ fill }: { fill: string }) {
   }, [fill, isDesktop, reducedQuery, smoothVelocity]);
 
   return (
-    // top-11 + -translate-y-full: el lienzo se adentra TAIL px en la sección
+    // top-5 + -translate-y-full: el lienzo se adentra TAIL px en la sección
     // para que la banda base cruce la división y la falla se asiente en ella.
     <div
       aria-hidden="true"
-      className="pointer-events-none absolute inset-x-0 top-11 z-10 h-[150px] -translate-y-full sm:h-[166px]"
+      className="pointer-events-none absolute inset-x-0 top-5 z-10 h-[150px] -translate-y-full sm:h-[166px]"
     >
       <canvas ref={canvasRef} className="block h-full w-full" />
     </div>
