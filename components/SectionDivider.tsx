@@ -117,8 +117,13 @@ const N = 2048;
 const NOISE_BIG = makeNoise(N, 40, 123457);
 const NOISE_FINE = makeNoise(N, 9, 987651);
 
-/** Cabecera de aire sobre la cresta para que los granos vuelen dentro. */
-const HEAD = 44;
+/**
+ * Cola del lienzo que se adentra en la sección (px CSS): los valles de la
+ * cresta se asientan JUSTO en la división y la cinta se funde sobre el
+ * arranque de la sección con un degradado de alpha — la unión queda tapada
+ * por la falla, sin costuras rectas.
+ */
+const TAIL = 40;
 
 export default function SectionDivider({ fill }: { fill: string }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -144,6 +149,7 @@ export default function SectionDivider({ fill }: { fill: string }) {
     let dpr = 1;
     let head = 0;
     let crestH = 0;
+    let tail = 0;
     let src: HTMLCanvasElement | null = null;
     let raf = 0;
     let active = false;
@@ -216,6 +222,17 @@ export default function SectionDivider({ fill }: { fill: string }) {
       s.lineDashOffset = -pulseT * len;
       s.stroke();
       s.setLineDash([]);
+
+      // Fundido de la cola: bajo la división, la cinta se disuelve sobre el
+      // contenido de la sección (sin arista recta de cierre).
+      const fadeTop = H - tail;
+      const grad = s.createLinearGradient(0, fadeTop, 0, H - 2 * dpr);
+      grad.addColorStop(0, "rgba(0,0,0,0)");
+      grad.addColorStop(1, "rgba(0,0,0,1)");
+      s.globalCompositeOperation = "destination-out";
+      s.fillStyle = grad;
+      s.fillRect(0, fadeTop, W, tail);
+      s.globalCompositeOperation = "source-over";
     };
 
     // Composición: rebanadas verticales desplazadas por el ruido derivante.
@@ -248,8 +265,11 @@ export default function SectionDivider({ fill }: { fill: string }) {
       dpr = Math.min(window.devicePixelRatio || 1, 1.5);
       W = Math.round(rect.width * dpr);
       H = Math.round(rect.height * dpr);
-      head = HEAD * dpr;
-      crestH = H - head;
+      tail = TAIL * dpr;
+      // Los valles de la cresta (y=70 del viewBox) caen en la división
+      // (H - tail); lo demás se reparte por encima.
+      crestH = (isDesktop ? 112 : 96) * dpr;
+      head = H - tail - (70 / 120) * crestH;
       canvas.width = W;
       canvas.height = H;
       src = document.createElement("canvas");
@@ -294,9 +314,11 @@ export default function SectionDivider({ fill }: { fill: string }) {
   }, [fill, isDesktop, reducedQuery, smoothVelocity]);
 
   return (
+    // top-10 + -translate-y-full: el lienzo se adentra TAIL px en la sección
+    // para que la falla tape la unión (los valles caen en la división).
     <div
       aria-hidden="true"
-      className="pointer-events-none absolute inset-x-0 top-px z-10 h-[140px] -translate-y-full sm:h-[156px]"
+      className="pointer-events-none absolute inset-x-0 top-10 z-10 h-[140px] -translate-y-full sm:h-[156px]"
     >
       <canvas ref={canvasRef} className="block h-full w-full" />
     </div>
