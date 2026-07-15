@@ -63,42 +63,67 @@ body {
   -webkit-text-stroke: 1.5px var(--color-coal);
 }
 
-/* ── Separadores de sección (cordillera viva) ────────────────────────────
-   Deriva en paralaje + morfología de picos (d: path — donde no hay soporte
-   queda la silueta estática) + pulso ember recorriendo la cresta. */
-.divider-front {
-  animation: divider-front 46s linear infinite;
+/* ── Frontera de sección (cresta que divide, bruma y pulso) ──────────────
+   .ridge-clip recorta el borde superior de la sección con la cresta: arriba
+   se ve la sección anterior y abajo esta, tocándose en los picos. Los
+   puntos son los mismos de SectionDivider.tsx escalados a 64px (móvil) y
+   112px (sm), a juego con las alturas h-16 / sm:h-28 de la decoración. */
+.ridge-clip {
+  clip-path: polygon(
+    0 37px,
+    6.667% 25px,
+    11.667% 31px,
+    18.333% 18px,
+    23.333% 30px,
+    30% 21px,
+    36.667% 34px,
+    42.5% 19px,
+    49.167% 28px,
+    55.833% 22px,
+    61.667% 32px,
+    67.5% 18px,
+    74.167% 27px,
+    80% 21px,
+    86.667% 31px,
+    92.5% 25px,
+    100% 37px,
+    100% 100%,
+    0 100%
+  );
+}
+
+@media (min-width: 640px) {
+  .ridge-clip {
+    clip-path: polygon(
+      0 65px,
+      6.667% 43px,
+      11.667% 54px,
+      18.333% 32px,
+      23.333% 52px,
+      30% 37px,
+      36.667% 60px,
+      42.5% 34px,
+      49.167% 49px,
+      55.833% 39px,
+      61.667% 56px,
+      67.5% 32px,
+      74.167% 47px,
+      80% 37px,
+      86.667% 54px,
+      92.5% 43px,
+      100% 65px,
+      100% 100%,
+      0 100%
+    );
+  }
 }
 
 .divider-back {
   animation: divider-back 30s linear infinite;
 }
 
-.divider-shape-front-fill {
-  animation: morph-front-fill 18s ease-in-out infinite;
-}
-
-.divider-shape-front-line {
-  animation: morph-front-line 18s ease-in-out infinite;
-}
-
-.divider-shape-back {
-  animation: morph-back 26s ease-in-out infinite;
-}
-
 .divider-pulse {
-  animation:
-    morph-front-line 18s ease-in-out infinite,
-    divider-pulse 6.5s linear infinite;
-}
-
-@keyframes divider-front {
-  from {
-    transform: translateX(-50%);
-  }
-  to {
-    transform: translateX(0);
-  }
+  animation: divider-pulse 6.5s linear infinite;
 }
 
 @keyframes divider-back {
@@ -116,48 +141,6 @@ body {
   }
   to {
     stroke-dashoffset: 0;
-  }
-}
-
-@keyframes morph-front-fill {
-  0%,
-  100% {
-    d: path(
-      "M0,70L96,46L168,58L264,34L336,56L432,40L528,64L612,36L708,52L804,42L888,60L972,34L1068,50L1152,40L1248,58L1332,46L1440,70L1440,122L0,122Z"
-    );
-  }
-  50% {
-    d: path(
-      "M0,70L96,52L168,48L264,42L336,48L432,30L528,58L612,44L708,42L804,52L888,50L972,42L1068,60L1152,32L1248,50L1332,54L1440,70L1440,122L0,122Z"
-    );
-  }
-}
-
-@keyframes morph-front-line {
-  0%,
-  100% {
-    d: path(
-      "M0,70L96,46L168,58L264,34L336,56L432,40L528,64L612,36L708,52L804,42L888,60L972,34L1068,50L1152,40L1248,58L1332,46L1440,70"
-    );
-  }
-  50% {
-    d: path(
-      "M0,70L96,52L168,48L264,42L336,48L432,30L528,58L612,44L708,42L804,52L888,50L972,42L1068,60L1152,32L1248,50L1332,54L1440,70"
-    );
-  }
-}
-
-@keyframes morph-back {
-  0%,
-  100% {
-    d: path(
-      "M0,84L72,34L156,62L228,14L312,50L396,24L480,58L576,10L660,44L756,20L840,54L924,12L1020,40L1104,26L1188,52L1284,16L1368,44L1440,84L1440,122L0,122Z"
-    );
-  }
-  50% {
-    d: path(
-      "M0,84L72,44L156,50L228,26L312,38L396,34L480,46L576,20L660,54L756,12L840,44L924,24L1020,52L1104,16L1188,42L1284,28L1368,54L1440,84L1440,122L0,122Z"
-    );
   }
 }
 
@@ -284,11 +267,7 @@ body {
 
   .scroll-cue::after,
   .rec-dot,
-  .divider-front,
   .divider-back,
-  .divider-shape-front-fill,
-  .divider-shape-front-line,
-  .divider-shape-back,
   .divider-pulse {
     animation: none;
   }

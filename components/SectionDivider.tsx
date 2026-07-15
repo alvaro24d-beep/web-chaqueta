@@ -8,82 +8,154 @@ import {
   useTransform,
   useVelocity,
 } from "framer-motion";
-import { useId, useRef } from "react";
+import { useCallback, useEffect, useId, useRef } from "react";
 
 /**
- * Separador de sección vivo: cresta de montaña dentada del color de la
- * sección a la que pertenece, colgando de su borde superior. Tres capas de
- * vida:
+ * Frontera de sección viva. La división real la hace un clip-path de cresta
+ * sobre la propia sección (.ridge-clip en globals.css, mismos puntos que
+ * aquí): arriba se ve la sección anterior y abajo esta, tocándose en los
+ * picos, sin bandas de relleno.
  *
- * 1. Deriva en paralaje (transform compositado) + morfología de picos
- *    (keyframes CSS sobre `d: path()` — en navegadores sin soporte queda
- *    la silueta estática, que sigue derivando).
- * 2. Pulso ember que recorre la cresta (stroke-dashoffset, pathLength=100).
- * 3. Erosión de arena reactiva al scroll: un feDisplacementMap con el ruido
- *    horneado (/sand-noise.png) desgarra el borde al cruzar el viewport,
- *    amplificado por la velocidad de scroll — quieto se recompone nítido.
- *    Filtro desconectado (`none`) fuera de la transición.
+ * Este componente añade la decoración sobre esa frontera (va FUERA de la
+ * sección recortada, como hermano, para que el clip no se lo coma):
+ * - Cordillera de bruma translúcida derivando sobre la sección anterior.
+ * - Línea ember siguiendo la cresta + pulso recorriéndola.
+ * - Cinta del color de la sección abrazando la cresta, que junto al resto
+ *   pasa por un feDisplacementMap con el ruido horneado: el borde está
+ *   erosionado en arena DESDE QUE ASOMA (base constante) y la falla crece
+ *   con la velocidad de scroll. Sin aristas horizontales rectas en el
+ *   contenido filtrado: nada que desgarrar donde no toca.
  */
 
-const FRONT_RIDGE =
-  "M0,70L96,46L168,58L264,34L336,56L432,40L528,64L612,36L708,52L804,42L888,60L972,34L1068,50L1152,40L1248,58L1332,46L1440,70";
-const BACK_RIDGE =
-  "M0,84L72,34L156,62L228,14L312,50L396,24L480,58L576,10L660,44L756,20L840,54L924,12L1020,40L1104,26L1188,52L1284,16L1368,44L1440,84";
-const closeRidge = (d: string) => `${d}L1440,122L0,122Z`;
+const POINTS: ReadonlyArray<readonly [number, number]> = [
+  [0, 70],
+  [96, 46],
+  [168, 58],
+  [264, 34],
+  [336, 56],
+  [432, 40],
+  [528, 64],
+  [612, 36],
+  [708, 52],
+  [804, 42],
+  [888, 60],
+  [972, 34],
+  [1068, 50],
+  [1152, 40],
+  [1248, 58],
+  [1332, 46],
+  [1440, 70],
+];
 
-const LINE_PROPS = {
-  fill: "none",
-  strokeWidth: 2,
-  vectorEffect: "non-scaling-stroke",
-} as const;
+const BACK_POINTS: ReadonlyArray<readonly [number, number]> = [
+  [0, 84],
+  [72, 34],
+  [156, 62],
+  [228, 14],
+  [312, 50],
+  [396, 24],
+  [480, 58],
+  [576, 10],
+  [660, 44],
+  [756, 20],
+  [840, 54],
+  [924, 12],
+  [1020, 40],
+  [1104, 26],
+  [1188, 52],
+  [1284, 16],
+  [1368, 44],
+  [1440, 84],
+];
+
+const ridgeLine = (
+  pts: ReadonlyArray<readonly [number, number]>,
+  dy = 0,
+) => `M${pts.map(([x, y]) => `${x},${y + dy}`).join("L")}`;
+
+/** Banda cerrada que sigue la cresta (sin aristas horizontales rectas). */
+const ridgeBand = (
+  pts: ReadonlyArray<readonly [number, number]>,
+  top: number,
+  bottom: number,
+) =>
+  `${ridgeLine(pts, top)}L${[...pts]
+    .reverse()
+    .map(([x, y]) => `${x},${y + bottom}`)
+    .join("L")}Z`;
+
+const CREST_LINE = ridgeLine(POINTS);
+const CREST_RIBBON = ridgeBand(POINTS, -5, 21);
+const HAZE_BAND = ridgeBand(BACK_POINTS, 0, 26);
 
 export default function SectionDivider({ fill }: { fill: string }) {
   const rawId = useId();
   const filterId = `erode${rawId.replace(/[^a-zA-Z0-9]/g, "")}`;
-  const containerRef = useRef<HTMLDivElement | null>(null);
+  const hazeRef = useRef<SVGSVGElement | null>(null);
+  const crestRef = useRef<SVGSVGElement | null>(null);
   const dispRef = useRef<SVGFEDisplacementMapElement | null>(null);
   const lastScaleRef = useRef(-1);
+  const inViewRef = useRef(false);
   const reduced = useReducedMotion();
 
-  const { scrollYProgress } = useScroll({
-    target: containerRef,
-    offset: ["start end", "end start"],
-  });
   const { scrollY } = useScroll();
   const smoothVelocity = useSpring(useVelocity(scrollY), {
     damping: 50,
     stiffness: 400,
   });
 
-  // Campana centrada en el cruce del viewport, amplificada por la velocidad:
-  // cuanto más rápido pasas la transición, más se deshace el borde en arena.
-  const erosion = useTransform(() => {
-    const bell = 1 - Math.abs(2 * scrollYProgress.get() - 1);
-    const boost = Math.min(56, Math.abs(smoothVelocity.get()) * 0.05);
-    return Math.max(0, bell) * (24 + boost);
-  });
+  // Falla base constante + impulso por velocidad de scroll.
+  const erosion = useTransform(
+    () => 26 + Math.min(62, Math.abs(smoothVelocity.get()) * 0.055),
+  );
+
+  const applyFilter = useCallback(
+    (scale: number) => {
+      if (scale >= 6) {
+        dispRef.current?.setAttribute("scale", String(scale));
+      }
+      for (const el of [hazeRef.current, crestRef.current]) {
+        if (el) el.style.filter = scale >= 6 ? `url(#${filterId})` : "none";
+      }
+    },
+    [filterId],
+  );
 
   useMotionValueEvent(erosion, "change", (v) => {
-    if (reduced) return;
-    const el = containerRef.current;
-    const disp = dispRef.current;
-    if (!el || !disp) return;
+    if (reduced || !inViewRef.current) return;
     const q = Math.round(v / 6) * 6;
     if (q === lastScaleRef.current) return;
     lastScaleRef.current = q;
-    if (q < 6) {
-      el.style.filter = "none";
-    } else {
-      disp.setAttribute("scale", String(q));
-      el.style.filter = `url(#${filterId})`;
-    }
+    applyFilter(q);
   });
+
+  // Activación por visibilidad (la frontera está erosionada desde que asoma).
+  useEffect(() => {
+    const target = crestRef.current;
+    if (!target || reduced) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        const visible = entries.some((e) => e.isIntersecting);
+        inViewRef.current = visible;
+        if (visible) {
+          const q = Math.max(24, Math.round(erosion.get() / 6) * 6);
+          lastScaleRef.current = q;
+          applyFilter(q);
+        } else {
+          lastScaleRef.current = -1;
+          applyFilter(0);
+        }
+      },
+      { rootMargin: "20% 0px 20% 0px" },
+    );
+    io.observe(target);
+    return () => io.disconnect();
+  }, [applyFilter, erosion, reduced]);
 
   return (
     <div
-      ref={containerRef}
       aria-hidden="true"
-      className="pointer-events-none absolute inset-x-0 top-px z-10 h-16 -translate-y-full overflow-hidden sm:h-28"
+      className="pointer-events-none absolute inset-x-0 top-0 z-10"
     >
       <svg width="0" height="0" className="absolute">
         <filter
@@ -114,77 +186,50 @@ export default function SectionDivider({ fill }: { fill: string }) {
         </filter>
       </svg>
 
-      <svg
-        className="divider-back absolute bottom-0 left-0 h-full w-[200%]"
-        viewBox="0 0 2880 120"
-        preserveAspectRatio="none"
-      >
-        <path
-          className="divider-shape-back"
-          d={closeRidge(BACK_RIDGE)}
-          fill={fill}
-          opacity="0.55"
-        />
-        <path
-          className="divider-shape-back"
-          d={closeRidge(BACK_RIDGE)}
-          fill={fill}
-          opacity="0.55"
-          transform="translate(1440 0)"
-        />
-      </svg>
+      {/* Bruma: cordillera translúcida derivando sobre la sección anterior */}
+      <div className="absolute inset-x-0 bottom-0 h-16 overflow-hidden sm:h-28">
+        <svg
+          ref={hazeRef}
+          className="divider-back absolute bottom-0 left-0 h-full w-[200%]"
+          viewBox="0 0 2880 120"
+          preserveAspectRatio="none"
+        >
+          <path d={HAZE_BAND} fill={fill} opacity="0.5" />
+          <path
+            d={HAZE_BAND}
+            fill={fill}
+            opacity="0.5"
+            transform="translate(1440 0)"
+          />
+        </svg>
+      </div>
 
+      {/* Cresta: cinta + línea ember + pulso, alineadas con el clip-path */}
       <svg
-        className="divider-front absolute bottom-0 left-0 h-full w-[200%]"
-        viewBox="0 0 2880 120"
+        ref={crestRef}
+        className="absolute left-0 top-0 h-16 w-full sm:h-28"
+        viewBox="0 0 1440 120"
         preserveAspectRatio="none"
       >
+        <path d={CREST_RIBBON} fill={fill} />
         <path
-          className="divider-shape-front-fill"
-          d={closeRidge(FRONT_RIDGE)}
-          fill={fill}
-        />
-        <path
-          className="divider-shape-front-fill"
-          d={closeRidge(FRONT_RIDGE)}
-          fill={fill}
-          transform="translate(1440 0)"
-        />
-        <path
-          className="divider-shape-front-line"
-          d={FRONT_RIDGE}
+          d={CREST_LINE}
+          fill="none"
           stroke="#ff5b1f"
-          opacity="0.7"
-          {...LINE_PROPS}
-        />
-        <path
-          className="divider-shape-front-line"
-          d={FRONT_RIDGE}
-          stroke="#ff5b1f"
-          opacity="0.7"
-          transform="translate(1440 0)"
-          {...LINE_PROPS}
+          strokeWidth="2"
+          vectorEffect="non-scaling-stroke"
+          opacity="0.75"
         />
         <path
           className="divider-pulse"
-          d={FRONT_RIDGE}
+          d={CREST_LINE}
           pathLength={100}
+          fill="none"
           stroke="#ffa270"
+          strokeWidth="2.5"
           strokeDasharray="6 94"
           strokeLinecap="round"
-          {...LINE_PROPS}
-          strokeWidth={2.5}
-        />
-        <path
-          className="divider-pulse"
-          d={FRONT_RIDGE}
-          pathLength={100}
-          stroke="#ffa270"
-          strokeDasharray="6 94"
-          strokeLinecap="round"
-          transform="translate(1440 0)"
-          {...LINE_PROPS}
-          strokeWidth={2.5}
+          vectorEffect="non-scaling-stroke"
         />
       </svg>
     </div>
