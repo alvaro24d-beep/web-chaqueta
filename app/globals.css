@@ -20,6 +20,46 @@
 :root {
   /* Token de easing de toda la web (en TS: lib/motion.ts) */
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  /* Color del humo de texto (SmokeText): por defecto, hueso */
+  --smoke-c: var(--color-bone);
+}
+
+/* ── Humo de texto por token de color ──────────────────────────────────
+   Las keyframes de SmokeText pintan el humo con text-shadow en
+   var(--smoke-c): cada utilidad de color de texto fija su propio humo,
+   así cada palabra ahúma en el color con el que va a condensar.
+   ([class*=…] cubre también las variantes con alfa como text-coal/70;
+   el orden importa: text-bone-dim debe ir tras text-bone.) */
+[class*="text-coal"] {
+  --smoke-c: var(--color-coal);
+}
+
+[class*="text-bone"] {
+  --smoke-c: var(--color-bone);
+}
+
+[class*="text-bone-dim"] {
+  --smoke-c: var(--color-bone-dim);
+}
+
+[class*="text-olive"] {
+  --smoke-c: var(--color-olive);
+}
+
+[class*="text-moss"] {
+  --smoke-c: var(--color-moss);
+}
+
+[class*="text-ember"] {
+  --smoke-c: var(--color-ember);
+}
+
+.text-outline {
+  --smoke-c: var(--color-bone);
+}
+
+.text-outline-dark {
+  --smoke-c: var(--color-coal);
 }
 
 html {

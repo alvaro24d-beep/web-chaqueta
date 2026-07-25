@@ -32,24 +32,6 @@ function MarqueeBand({ children }: { children: ReactNode }) {
   );
 }
 
-/** Celda de stat que entra en cascada cuando el plano de datos se activa. */
-function StatCell({ index, children }: { index: number; children: ReactNode }) {
-  const passed = useSceneCue(0.68);
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 18 }}
-      animate={passed ? { opacity: 1, y: 0 } : { opacity: 0, y: 18 }}
-      transition={{
-        delay: passed ? index * 0.07 : 0,
-        duration: 0.55,
-        ease: EASE_OUT,
-      }}
-      className="bg-coal p-8 sm:p-10"
-    >
-      {children}
-    </motion.div>
-  );
-}
 
 const STATS: {
   prefix?: string;
@@ -87,7 +69,6 @@ export default function Manifesto() {
       <Shot
         from={0}
         to={0.34}
-        exit="left"
         className="inset-0 flex items-center justify-center px-6 pb-24"
       >
         <h2 className="text-center font-display uppercase leading-[0.88] text-[clamp(3rem,11vw,10rem)]">
@@ -101,8 +82,6 @@ export default function Manifesto() {
       <Shot
         from={0.34}
         to={0.66}
-        enter="right"
-        exit="left"
         className="inset-0 flex items-center px-6 pb-24 sm:px-[8vw]"
       >
         <div className="mx-auto grid w-full max-w-6xl items-center gap-12 md:grid-cols-[1fr_1.3fr] md:gap-20">
@@ -136,12 +115,11 @@ export default function Manifesto() {
       <Shot
         from={0.66}
         to={1}
-        enter="right"
         className="inset-0 flex items-center justify-center px-6 pb-24 sm:px-[8vw]"
       >
         <dl className="mx-auto grid w-full max-w-6xl grid-cols-2 gap-px border border-bone/10 bg-bone/10 lg:grid-cols-4">
-          {STATS.map((s, i) => (
-            <StatCell key={s.label} index={i}>
+          {STATS.map((s) => (
+            <div key={s.label} className="bg-coal p-8 sm:p-10">
               <dd className="font-display text-5xl leading-none sm:text-7xl">
                 <ScrubCounter
                   to={s.to}
@@ -156,7 +134,7 @@ export default function Manifesto() {
               <dt className="mt-4 font-mono text-[11px] uppercase tracking-[0.25em] text-bone-dim">
                 {s.label}
               </dt>
-            </StatCell>
+            </div>
           ))}
         </dl>
       </Shot>

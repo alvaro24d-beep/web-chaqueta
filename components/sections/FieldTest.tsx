@@ -92,7 +92,6 @@ export default function FieldTest() {
       <Shot
         from={0}
         to={0.28}
-        exit="left"
         className="inset-0 flex flex-col items-center justify-center px-6 text-center"
       >
         <p className="mb-5 font-mono text-[11px] uppercase tracking-[0.3em] text-moss">
@@ -110,7 +109,6 @@ export default function FieldTest() {
       <Shot
         from={0.7}
         to={0.96}
-        enter="right"
         className="inset-x-0 bottom-[9%] flex justify-center px-6"
       >
         <figure className="max-w-3xl border border-bone/25 bg-coal/85 p-7 text-bone backdrop-blur-sm sm:p-9">

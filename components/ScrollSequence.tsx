@@ -1,9 +1,9 @@
-﻿"use client";
+"use client";
 
-import { useEffect, useId, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import SectionDivider from "@/components/SectionDivider";
-import SandFilter from "@/components/motion/SandFilter";
-import { getFrame, onFrameLoad, preloadSequences } from "@/lib/frameStore";
+import { SmokeGate, type SmokeMode, type SmokePosition } from "@/components/motion/SmokeText";
+import { getFrame, isPageReady, onFrameLoad, preloadSequences } from "@/lib/frameStore";
 import { useSceneHeightVh } from "@/lib/useSceneHeight";
 
 /**
@@ -12,10 +12,10 @@ import { useSceneHeightVh } from "@/lib/useSceneHeight";
  * Los fotogramas salen de la caché global (lib/frameStore) que el Preloader
  * llena al arrancar: reproducción siempre a fotograma exacto.
  *
- * Los hijos con data-from / data-to son "pasos" superpuestos que el bucle de
- * animación funde y desplaza según el progreso (ver <SeqStep />). No uses
- * utilidades de transform de Tailwind en el elemento del paso: el bucle
- * escribe style.transform directamente — posiciona con inset + flex.
+ * Los hijos con data-from / data-to son "pasos" superpuestos (ver <SeqStep />):
+ * el bucle rAF calcula si el progreso está dentro de su rango y les avisa por
+ * CustomEvent; el texto del paso entra con el humo de SmokeText (Originkit) y
+ * sale por fundido. Las entradas esperan a que el Preloader suelte la página.
  */
 
 type ScrollSequenceProps = {
@@ -36,38 +36,10 @@ type StepMeta = {
   el: HTMLElement;
   from: number;
   to: number;
-  dir: StepDir;
-  /** Nodos del filtro de arena del paso (si los tiene). */
-  disp: SVGFEDisplacementMapElement | null;
-  funcR: SVGFEFuncRElement | null;
-  lastScale: number;
-  filterId: string;
-  /** Hijos de contenido a los que se aplica el filtro (excluye el svg). */
-  targets: HTMLElement[];
-  /** Animación temporal 0..1 (las entradas/salidas se reproducen enteras). */
-  anim: number;
-  target: number;
-  vec: { x: number; y: number; s: number };
+  on: boolean;
 };
-
-type StepDir = "up" | "left" | "right" | "zoom";
 
 const BG = "#0c0e09";
-// El desplazamiento es de un solo lado (viento): más escala para compensar.
-const SAND_SCALE = 170;
-const ENTER_MS = 850;
-const EXIT_MS = 600;
-
-const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
-
-/** Offset del paso en el borde de entrada ("start") o de salida ("end"). */
-const vecFor = (dir: StepDir, edge: "start" | "end") => {
-  if (dir === "left") return { x: edge === "start" ? -110 : 110, y: 0, s: 1 };
-  if (dir === "right") return { x: edge === "start" ? 110 : -110, y: 0, s: 1 };
-  if (dir === "zoom")
-    return { x: 0, y: 0, s: edge === "start" ? 0.86 : 1.09 };
-  return { x: 0, y: edge === "start" ? 32 : -32, s: 1 };
-};
 
 export default function ScrollSequence({
   frames,
@@ -101,10 +73,6 @@ export default function ScrollSequence({
     let lastImg: HTMLImageElement | null = null;
     let raf = 0;
     let active = false;
-
-    const reducedMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)",
-    ).matches;
 
     const desiredFrame = () =>
       Math.min(n - 1, Math.max(0, Math.round(frameProgress * (n - 1))));
@@ -150,67 +118,19 @@ export default function ScrollSequence({
       el,
       from: parseFloat(el.dataset.from ?? "0"),
       to: parseFloat(el.dataset.to ?? "1"),
-      dir: (el.dataset.dir ?? "up") as StepDir,
-      disp: el.querySelector<SVGFEDisplacementMapElement>("feDisplacementMap"),
-      funcR: el.querySelector<SVGFEFuncRElement>("feFuncR"),
-      lastScale: -1,
-      filterId: el.dataset.sandId ?? "",
-      targets: Array.from(el.children).filter(
-        (c): c is HTMLElement => c instanceof HTMLElement,
-      ),
-      anim: 0,
-      target: 0,
-      vec: vecFor((el.dataset.dir ?? "up") as StepDir, "start"),
+      on: false,
     }));
 
-    // Entradas/salidas disparadas por umbral y reproducidas ENTERAS en el
-    // tiempo (no ligadas al progreso): aunque el scroll sea rápido o se pare
-    // a mitad, la animación del texto siempre se completa.
-    const updateSteps = (dt: number) => {
+    // Cada paso recibe su encendido/apagado por evento; SmokeGate reproduce
+    // la entrada de humo ENTERA (no ligada al scroll) y la salida por fundido.
+    // Nada se estrena bajo el Preloader: se espera a isPageReady().
+    const updateSteps = () => {
+      const ready = isPageReady();
       for (const s of steps) {
-        const inRange = progress >= s.from && progress <= s.to;
-        const target = inRange ? 1 : 0;
-        if (target !== s.target) {
-          s.target = target;
-          // Lado por el que entra/sale según el borde del rango cruzado.
-          const edge =
-            progress < (s.from + s.to) / 2 ? ("start" as const) : ("end" as const);
-          s.vec = vecFor(s.dir, edge);
-          // El viento sopla del lado por el que se mueve el paso.
-          s.funcR?.setAttribute("intercept", s.vec.x > 0 ? "0" : "0.5");
-        }
-        if (s.anim !== s.target) {
-          const dur = s.target === 1 ? ENTER_MS : EXIT_MS;
-          s.anim = Math.min(
-            1,
-            Math.max(0, s.anim + ((s.target === 1 ? 1 : -1) * dt) / dur),
-          );
-        }
-        const e = easeOut(s.anim);
-        // Movimiento reducido: solo fundido de opacidad, sin desplazamientos.
-        const move = reducedMotion ? 0 : 1 - e;
-        const x = s.vec.x * move;
-        const y = s.vec.y * move;
-        const sc = 1 + (s.vec.s - 1) * move;
-        s.el.style.opacity = e.toFixed(3);
-        s.el.style.transform = `translate3d(${x.toFixed(2)}px, ${y.toFixed(2)}px, 0) scale(${sc.toFixed(4)})`;
-        s.el.style.visibility = e <= 0.001 ? "hidden" : "visible";
-
-        // Arena al viento: el contenido se disgrega en ráfagas mientras la
-        // animación está en curso. Escala cuantizada: menos invalidaciones
-        // del filtro = fluidez.
-        if (s.disp && !reducedMotion) {
-          const granular = e > 0.001 && e < 0.999;
-          if (granular) {
-            const scale = Math.round(((1 - e) * SAND_SCALE) / 6) * 6;
-            if (scale !== s.lastScale) {
-              s.lastScale = scale;
-              s.disp.setAttribute("scale", String(scale));
-            }
-          }
-          for (const target of s.targets) {
-            target.style.filter = granular ? `url(#${s.filterId})` : "none";
-          }
+        const on = ready && progress >= s.from && progress <= s.to;
+        if (on !== s.on) {
+          s.on = on;
+          s.el.dispatchEvent(new CustomEvent("smoke", { detail: { on } }));
         }
       }
     };
@@ -227,15 +147,11 @@ export default function ScrollSequence({
         span > 0 ? Math.min(1, Math.max(0, (preRoll - rect.top) / span)) : 0;
     };
 
-    let lastT = performance.now();
     const tick = () => {
       if (!active) return;
-      const now = performance.now();
-      const dt = Math.min(64, now - lastT);
-      lastT = now;
       measure();
       draw();
-      updateSteps(dt);
+      updateSteps();
       raf = requestAnimationFrame(tick);
     };
 
@@ -271,13 +187,13 @@ export default function ScrollSequence({
     );
     ioLoad.observe(section);
 
-    // El bucle rAF solo corre con la sección cerca del viewport.
+    // El bucle rAF solo corre con la sección cerca del viewport: los pasos
+    // estrenan su entrada a la vista del usuario, nunca fuera de pantalla.
     const ioActive = new IntersectionObserver(
       (entries) => {
         const isNear = entries.some((e) => e.isIntersecting);
         if (isNear && !active) {
           active = true;
-          lastT = performance.now();
           raf = requestAnimationFrame(tick);
         } else if (!isNear && active) {
           active = false;
@@ -288,12 +204,9 @@ export default function ScrollSequence({
     );
     ioActive.observe(section);
 
-    // dt=0: los pasos ya dentro de rango fijan su objetivo pero la animación
-    // no avanza hasta que la sección se acerca (el bucle rAF solo corre
-    // entonces) — la entrada siempre se reproduce a la vista del usuario.
     resize();
     measure();
-    updateSteps(0);
+    updateSteps();
 
     return () => {
       active = false;
@@ -328,40 +241,55 @@ export default function ScrollSequence({
 }
 
 /**
- * Paso superpuesto de una ScrollSequence. Visible mientras el progreso de la
- * sección está dentro de [from, to]. Posiciónalo SOLO con inset/flex en
- * className (nunca con utilidades translate-*: el transform lo pilota JS).
- * `dir` marca la coreografía: "left"/"right" cruzan la pantalla, "zoom"
- * acerca el plano a cámara, "up" es el desplazamiento vertical clásico.
- * El contenido se compone/descompone en arena en las rampas de entrada/salida.
+ * Paso superpuesto de una ScrollSequence: visible mientras el progreso de la
+ * sección está dentro de [from, to]. El texto entra con el humo del Smoky
+ * Text (por defecto: vuelo desde abajo-izquierda con escalonado secuencial)
+ * y sale por fundido. Posiciónalo con inset/flex en className.
  */
 export function SeqStep({
   from,
   to,
-  dir = "up",
   className = "",
   children,
+  duration,
+  intensity,
+  position,
+  animationMode,
 }: {
   from: number;
   to: number;
-  dir?: StepDir;
   className?: string;
   children: ReactNode;
+  duration?: number;
+  intensity?: number;
+  position?: SmokePosition;
+  animationMode?: SmokeMode;
 }) {
-  const rawId = useId();
-  const filterId = `sand${rawId.replace(/[^a-zA-Z0-9]/g, "")}`;
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [on, setOn] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const handler = (e: Event) =>
+      setOn(Boolean((e as CustomEvent<{ on: boolean }>).detail?.on));
+    el.addEventListener("smoke", handler);
+    return () => el.removeEventListener("smoke", handler);
+  }, []);
 
   return (
-    <div
+    <SmokeGate
+      ref={ref}
+      on={on}
       data-from={from}
       data-to={to}
-      data-dir={dir}
-      data-sand-id={filterId}
-      style={{ opacity: 0, visibility: "hidden" }}
-      className={`absolute will-change-transform ${className}`}
+      duration={duration}
+      intensity={intensity}
+      position={position}
+      animationMode={animationMode}
+      className={`absolute ${className}`}
     >
-      <SandFilter id={filterId} />
       {children}
-    </div>
+    </SmokeGate>
   );
 }

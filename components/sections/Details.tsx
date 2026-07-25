@@ -45,7 +45,7 @@ export default function Details() {
       dividerFill="#0c0e09"
       ariaLabel="Detalles construidos"
     >
-      <SeqStep from={0} to={1} dir="left" className="left-6 top-24 sm:left-10">
+      <SeqStep from={0} to={1} className="left-6 top-24 sm:left-10">
         <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-bone-dim">
           Detalles construidos
           <span className="ml-4 text-ember">01–04</span>
@@ -57,7 +57,6 @@ export default function Details() {
           key={c.index}
           from={c.from}
           to={c.to}
-          dir={c.side === "left" ? "left" : "right"}
           className={`inset-y-0 flex items-center px-6 sm:px-[7vw] ${
             c.side === "left"
               ? "left-0 justify-start"

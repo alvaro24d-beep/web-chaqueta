@@ -2,7 +2,7 @@
 
 import { motion, useInView } from "framer-motion";
 import { useRef } from "react";
-import SandText from "@/components/motion/SandText";
+import SmokeText from "@/components/motion/SmokeText";
 import { useMediaQuery } from "@/lib/useMediaQuery";
 
 const COLS = [
@@ -45,7 +45,7 @@ export default function Footer() {
       <footer className="overflow-hidden border-t border-bone/10 bg-coal px-6 pb-10 pt-20 sm:px-10 lg:fixed lg:inset-x-0 lg:bottom-0 lg:z-0 lg:flex lg:h-[78vh] lg:flex-col lg:justify-center lg:pt-0">
         <div className="mx-auto w-full max-w-7xl">
           <div className="grid gap-14 md:grid-cols-[1.5fr_1fr_1fr_1fr]">
-            <SandText from="left" duration={1.4} grain={180} when={show}>
+            <SmokeText when={show}>
               <p className="font-display text-6xl uppercase leading-none text-outline sm:text-8xl">
                 Vetta
               </p>
@@ -54,11 +54,10 @@ export default function Footer() {
                 <br />
                 Diseñado en los Pirineos
               </p>
-            </SandText>
+            </SmokeText>
             {COLS.map((col, i) => (
-              <SandText
+              <SmokeText
                 key={col.title}
-                from="right"
                 delay={0.12 + i * 0.14}
                 when={show}
               >
@@ -82,14 +81,14 @@ export default function Footer() {
                     ))}
                   </ul>
                 </nav>
-              </SandText>
+              </SmokeText>
             ))}
           </div>
-          <SandText from="none" delay={0.3} duration={1} when={show}>
+          <SmokeText animationMode="inPlace" delay={0.3} when={show}>
             <p className="mt-20 border-t border-bone/10 pt-6 font-mono text-[10px] uppercase tracking-[0.22em] text-bone-dim/70">
               © 2026 Vetta Mountain Equipment — Página ficticia de demostración
             </p>
-          </SandText>
+          </SmokeText>
         </div>
       </footer>
     </>

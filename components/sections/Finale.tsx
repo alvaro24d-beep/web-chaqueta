@@ -14,7 +14,6 @@ export default function Finale() {
       <SeqStep
         from={0.05}
         to={0.38}
-        dir="zoom"
         className="inset-0 flex items-center justify-center px-6"
       >
         <h2 className="text-center font-display uppercase leading-[0.85] text-[clamp(4rem,15vw,13rem)]">
@@ -25,7 +24,6 @@ export default function Finale() {
       <SeqStep
         from={0.5}
         to={1}
-        dir="zoom"
         className="inset-0 flex flex-col items-center justify-center px-6 text-center"
       >
         <p className="mb-5 font-mono text-[11px] uppercase tracking-[0.35em] text-olive">

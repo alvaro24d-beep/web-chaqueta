@@ -10,7 +10,7 @@ import { useEffect, useRef, useState } from "react";
 import { EASE_OUT } from "@/lib/motion";
 import { useMediaQuery } from "@/lib/useMediaQuery";
 import SectionDivider from "@/components/SectionDivider";
-import SandText from "@/components/motion/SandText";
+import SmokeText from "@/components/motion/SmokeText";
 import TiltCard from "@/components/motion/TiltCard";
 import { useSceneHeightVh } from "@/lib/useSceneHeight";
 
@@ -146,7 +146,7 @@ export default function FeaturesGrid() {
           className="flex w-max items-stretch gap-6 px-6 sm:gap-10 sm:px-16"
         >
           <div className="flex w-[82vw] shrink-0 flex-col justify-center sm:w-[46vw]">
-            <SandText from="left" duration={1.3}>
+            <SmokeText>
               <p className="mb-5 font-mono text-[11px] uppercase tracking-[0.3em] text-moss">
                 Sin adornos — solo ingeniería
               </p>
@@ -160,7 +160,7 @@ export default function FeaturesGrid() {
               <p className="mt-10 font-mono text-[11px] uppercase tracking-[0.3em] text-ember">
                 Sigue deslizando — la escena avanza en horizontal →
               </p>
-            </SandText>
+            </SmokeText>
           </div>
 
           {FEATURES.map((f) => (
@@ -169,11 +169,7 @@ export default function FeaturesGrid() {
               className="group w-[74vw] shrink-0 border border-coal/15 bg-bone sm:w-[42vw] lg:w-[30vw]"
             >
               <TiltCard className="h-full">
-                <SandText
-                  from="right"
-                  className="h-full"
-                  innerClassName="h-full"
-                >
+                <SmokeText className="h-full">
                   <div className="flex h-full min-h-[52vh] flex-col p-8 transition-colors duration-250 group-hover:bg-coal group-hover:text-bone sm:p-10">
                     <p className="font-display text-6xl leading-none text-coal/15 transition-colors duration-250 group-hover:text-ember sm:text-7xl">
                       {f.index}
@@ -185,7 +181,7 @@ export default function FeaturesGrid() {
                       {f.body}
                     </p>
                   </div>
-                </SandText>
+                </SmokeText>
               </TiltCard>
             </div>
           ))}

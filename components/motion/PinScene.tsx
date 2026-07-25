@@ -1,37 +1,29 @@
-﻿"use client";
+"use client";
 
 import {
-  animate,
-  cubicBezier,
-  motion,
   useInView,
-  useMotionValue,
   useMotionValueEvent,
-  useReducedMotion,
   useScroll,
   useTransform,
-  type AnimationPlaybackControls,
   type MotionValue,
 } from "framer-motion";
 import {
   createContext,
   useContext,
   useEffect,
-  useId,
   useRef,
   useState,
   type ReactNode,
 } from "react";
 import SectionDivider from "@/components/SectionDivider";
-import SandFilter from "@/components/motion/SandFilter";
-import { EASE_OUT } from "@/lib/motion";
+import { SmokeGate, type SmokeMode, type SmokePosition } from "@/components/motion/SmokeText";
 import { useSceneHeightVh } from "@/lib/useSceneHeight";
 
 /**
  * Escena cinematográfica fijada: una sección alta con un contenedor sticky a
  * pantalla completa cuyo contenido se "reproduce" con el scroll (scrubbing).
- * Los hijos <Shot> son planos con un rango [from, to] del progreso que entran
- * y salen por los lados, con zoom o fijos — nunca la columna vertical clásica.
+ * Los hijos <Shot> son planos con un rango [from, to] del progreso: su texto
+ * entra con el humo de SmokeText (Originkit) y sale por fundido.
  */
 
 const SceneCtx = createContext<MotionValue<number> | null>(null);
@@ -91,187 +83,57 @@ export function PinScene({
   );
 }
 
-export type ShotEdge = "left" | "right" | "top" | "bottom" | "zoom" | "none";
-
-const EASE = cubicBezier(...EASE_OUT);
-const DIST = 130;
-
-const edgeOffset = (edge: ShotEdge, isExit: boolean) => {
-  switch (edge) {
-    case "left":
-      return { x: -DIST, y: 0, scale: 1 };
-    case "right":
-      return { x: DIST, y: 0, scale: 1 };
-    case "top":
-      return { x: 0, y: -DIST, scale: 1 };
-    case "bottom":
-      return { x: 0, y: DIST, scale: 1 };
-    case "zoom":
-      // Entra alejado (pequeño) y sale acercándose a cámara (grande).
-      return { x: 0, y: 0, scale: isExit ? 1.1 : 0.88 };
-    default:
-      return { x: 0, y: 0, scale: 1 };
-  }
-};
-
-// El desplazamiento es de un solo lado (viento): más escala para compensar.
-const SAND_SCALE = 160;
-
 /**
  * Plano de una PinScene: visible mientras el progreso está en [from, to].
- * Al cruzar un umbral, la entrada/salida se reproduce ENTERA en el tiempo
- * (no ligada al scroll): aunque el usuario pare o vaya rápido, la animación
- * siempre se completa. El contenido se compone/descompone en arena (filtro
- * SVG de desplazamiento por ruido); desactivable con sand={false}.
- * Posiciónalo solo con inset/flex en className: x/y/scale los pilota el plano.
+ * Al entrar en rango, el texto se reproduce ENTERO con el humo del Smoky
+ * Text (no ligado al scroll: aunque el usuario pare o vaya rápido, la
+ * animación siempre se completa); al salir, fundido. La escena tiene que
+ * asomar en pantalla antes de estrenar nada (los planos de apertura no se
+ * reproducen invisibles al montar). Posiciónalo con inset/flex en className.
  */
 export function Shot({
   children,
   from,
   to,
-  enter = "right",
-  exit = "left",
-  sand = true,
   className = "",
+  duration,
+  intensity,
+  position,
+  animationMode,
 }: {
   children: ReactNode;
   from: number;
   to: number;
-  enter?: ShotEdge;
-  exit?: ShotEdge;
-  sand?: boolean;
   className?: string;
+  duration?: number;
+  intensity?: number;
+  position?: SmokePosition;
+  animationMode?: SmokeMode;
 }) {
   const progress = useSceneProgress();
-  const rawId = useId();
-  const filterId = `sand${rawId.replace(/[^a-zA-Z0-9]/g, "")}`;
-  const outerRef = useRef<HTMLDivElement | null>(null);
-  const filterNodesRef = useRef<{
-    disp: Element | null;
-    lastScale: number;
-  } | null>(null);
-  const reduced = useReducedMotion();
-
-  const opacity = useMotionValue(0);
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
-  const scale = useMotionValue(1);
-  /** 0 = arena suelta · 1 = texto compuesto. */
-  const compose = useMotionValue(0);
-  const activeRef = useRef<boolean | null>(null);
-  const controlsRef = useRef<AnimationPlaybackControls[]>([]);
-
-  const visibility = useTransform(opacity, (v) =>
-    v <= 0.001 ? "hidden" : "visible",
-  );
-
-  // La arena sigue a la animación de composición. El filtro se aplica a los
-  // hijos de contenido (no al plano entero) para acotar el área a repintar.
-  useMotionValueEvent(compose, "change", (v) => {
-    if (!sand || reduced) return;
-    const outer = outerRef.current;
-    if (!outer) return;
-    const nodes = (filterNodesRef.current ??= {
-      disp: outer.querySelector("feDisplacementMap"),
-      lastScale: -1,
-    });
-    const granular = v > 0.001 && v < 0.999;
-    if (granular) {
-      // Escala cuantizada: menos invalidaciones del filtro = fluidez.
-      const scale = Math.round(((1 - v) * SAND_SCALE) / 6) * 6;
-      if (scale !== nodes.lastScale) {
-        nodes.lastScale = scale;
-        nodes.disp?.setAttribute("scale", String(scale));
-      }
-    }
-    for (const child of outer.children) {
-      if (!(child instanceof HTMLElement)) continue;
-      child.style.filter = granular ? `url(#${filterId})` : "none";
-    }
-  });
-
-  // La escena tiene que asomar en pantalla antes de reproducir nada: los
-  // planos de apertura (from=0) estrenan su entrada cuando el usuario llega,
-  // no de forma invisible al montar.
-  const seen = useInView(outerRef, { once: true, amount: 0.2 });
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [on, setOn] = useState(false);
+  const seen = useInView(ref, { once: true, amount: 0.2 });
 
   useEffect(() => {
-    const edgeFor = (p: number) => {
-      const edge = p < (from + to) / 2 ? enter : exit;
-      return { edge, off: edgeOffset(edge, edge === exit) };
-    };
-
-    if (!seen) {
-      if (activeRef.current === null) {
-        // Oculto, colocado en su lado de entrada, a la espera de asomar.
-        const { off } = edgeFor(progress.get());
-        opacity.set(0);
-        x.set(off.x);
-        y.set(off.y);
-        scale.set(off.scale);
-        compose.set(0);
-      }
-      return;
-    }
-
-    const apply = (p: number) => {
-      const inRange = p >= from && p <= to;
-      if (inRange === activeRef.current) return;
-      activeRef.current = inRange;
-
-      // Lado del borde cruzado: entrando/saliendo por el inicio del rango se
-      // usa el lado de entrada; por el final, el de salida.
-      const { edge, off } = edgeFor(p);
-
-      // El viento sopla del lado por el que se mueve el plano.
-      outerRef.current
-        ?.querySelector("feFuncR")
-        ?.setAttribute("intercept", edge === "right" ? "0" : "0.5");
-
-      controlsRef.current.forEach((c) => c.stop());
-
-      if (reduced) {
-        opacity.set(inRange ? 1 : 0);
-        x.set(inRange ? 0 : off.x);
-        y.set(inRange ? 0 : off.y);
-        scale.set(inRange ? 1 : off.scale);
-        compose.set(inRange ? 1 : 0);
-        return;
-      }
-
-      const t = { duration: inRange ? 0.9 : 0.65, ease: EASE };
-      if (inRange && opacity.get() <= 0.01) {
-        // Parte del lado por el que entra.
-        x.set(off.x);
-        y.set(off.y);
-        scale.set(off.scale);
-      }
-      controlsRef.current = [
-        animate(opacity, inRange ? 1 : 0, t),
-        animate(x, inRange ? 0 : off.x, t),
-        animate(y, inRange ? 0 : off.y, t),
-        animate(scale, inRange ? 1 : off.scale, t),
-        animate(compose, inRange ? 1 : 0, t),
-      ];
-    };
-
+    if (!seen) return;
+    const apply = (p: number) => setOn(p >= from && p <= to);
     apply(progress.get());
-    const unsubscribe = progress.on("change", apply);
-    return () => {
-      unsubscribe();
-      controlsRef.current.forEach((c) => c.stop());
-    };
-  }, [seen, from, to, enter, exit, reduced, progress, opacity, x, y, scale, compose]);
+    return progress.on("change", apply);
+  }, [seen, from, to, progress]);
 
   return (
-    <motion.div
-      ref={outerRef}
-      style={{ opacity, x, y, scale, visibility }}
-      className={`absolute will-change-transform ${className}`}
+    <SmokeGate
+      ref={ref}
+      on={on}
+      duration={duration}
+      intensity={intensity}
+      position={position}
+      animationMode={animationMode}
+      className={`absolute ${className}`}
     >
-      {sand && <SandFilter id={filterId} />}
       {children}
-    </motion.div>
+    </SmokeGate>
   );
 }
 

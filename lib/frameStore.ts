@@ -87,6 +87,9 @@ export function releasePage() {
   notify();
 }
 
+/** Versión imperativa para bucles rAF (ScrollSequence). */
+export const isPageReady = () => released || isComplete();
+
 /**
  * true cuando la página está liberada: precarga completa o failsafe del
  * Preloader. Las animaciones de arranque deben esperar a esto — nunca a
@@ -95,7 +98,7 @@ export function releasePage() {
 export function usePageReady() {
   return useSyncExternalStore(
     (cb) => onFrameLoad(cb),
-    () => released || isComplete(),
+    () => isPageReady(),
     () => false,
   );
 }
