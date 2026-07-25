@@ -1,5 +1,6 @@
 import ScrollSequence, { SeqStep } from "@/components/ScrollSequence";
 import SandText from "@/components/motion/SandText";
+import SmokeText from "@/components/motion/SmokeText";
 import { SEQ_ANDANDO } from "@/lib/frames";
 
 export default function Hero() {
@@ -16,22 +17,22 @@ export default function Hero() {
         dir="zoom"
         className="inset-0 flex flex-col items-center justify-center px-6 text-center"
       >
-        <SandText mode="mount" from="none" delay={0.15} duration={0.9}>
+        <SmokeText mode="mount" from="none" delay={0.15} duration={0.9} intensity={5}>
           <p className="mb-6 font-mono text-[11px] uppercase tracking-[0.35em] text-olive sm:text-xs">
             Vetta · Equipo de montaña
           </p>
-        </SandText>
-        <SandText mode="mount" from="none" delay={0.4} duration={1.7} grain={230}>
+        </SmokeText>
+        <SmokeText mode="mount" from="none" delay={0.4} duration={1.7} intensity={14}>
           <h1 className="font-display uppercase leading-[0.85] text-[clamp(4.2rem,16vw,14rem)]">
             Stratum<span className="text-outline">&nbsp;3L</span>
           </h1>
-        </SandText>
-        <SandText mode="mount" from="none" delay={1.2} duration={1}>
+        </SmokeText>
+        <SmokeText mode="mount" from="none" delay={1.2} duration={1} intensity={8}>
           <p className="mt-7 max-w-xl text-balance text-base text-bone-dim sm:text-lg">
             La shell de tres capas para quienes no consultan el parte antes de
             decidir si salen.
           </p>
-        </SandText>
+        </SmokeText>
       </SeqStep>
 
       <SeqStep
