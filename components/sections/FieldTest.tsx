@@ -91,7 +91,7 @@ export default function FieldTest() {
       {/* Plano 1 — el titular abre la escena y cede el sitio al vídeo */}
       <Shot
         from={0}
-        to={0.28}
+        to={0.34}
         className="inset-0 flex flex-col items-center justify-center px-6 text-center"
       >
         <p className="mb-5 font-mono text-[11px] uppercase tracking-[0.3em] text-moss">
@@ -107,7 +107,7 @@ export default function FieldTest() {
       {/* Plano 2 — la cita entra por la derecha sobre el vídeo ya grande y
           sale antes de que la cresta del final la corte */}
       <Shot
-        from={0.7}
+        from={0.66}
         to={0.96}
         className="inset-x-0 bottom-[9%] flex justify-center px-6"
       >

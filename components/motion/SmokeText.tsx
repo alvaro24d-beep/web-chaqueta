@@ -49,33 +49,31 @@ const STAGGER = 0.1;
 
 /**
  * Keyframes del original parametrizadas por intensidad: 1 = soplo nítido y
- * corto · 20 = humareda densa que llega de lejos. El color va en
- * var(--smoke-c) para heredar el del texto.
+ * corto · 20 = humareda densa que llega de lejos.
+ *
+ * Rendimiento: el original anima pilas de text-shadow — eso se repinta en
+ * CPU en cada frame por carácter y desploma los fps. Aquí la nube la anima
+ * `filter: blur` (compuesto en GPU: cero repintados) sobre la copia nítida
+ * del glifo que da un text-shadow ESTÁTICO `0 0 0 var(--smoke-c)`. Radios a
+ * la mitad que el original porque blur() usa σ=R (la sombra ~R/2): el humo
+ * se ve igual de ancho.
  */
 function kfFor(level: number): string {
   const n = (level - 1) / 19;
   const r = (v: number) => +v.toFixed(2);
-  const peakB = Math.round(6 + n * 200);
-  const initB = Math.round(2 + n * 70);
-  const layers = 1 + Math.round(n * 3);
-  const stack = (blur: number) =>
-    Array.from(
-      { length: layers },
-      (_, i) => `0 0 ${Math.round((blur * (i + 1)) / layers)}px var(--smoke-c)`,
-    ).join(",");
-  const peak = stack(peakB);
-  const init = stack(initB);
+  const peakB = Math.round(3 + n * 100);
+  const initB = Math.round(1 + n * 35);
   const d = 0.7 + n * 0.8;
   const ic = r(1.3 + n * 0.5);
   const ic2 = r(1.15 + n * 0.35);
   const p = `smt${level}`;
   return `
-@keyframes ${p}-c-a{from{opacity:0;text-shadow:${init};transform:scale(${ic})}40%{text-shadow:${peak}}to{opacity:1;text-shadow:0 0 0 var(--smoke-c);transform:none}}
-@keyframes ${p}-c-b{from{opacity:0;text-shadow:${init};transform:scale(${ic2})}40%{text-shadow:${peak}}to{opacity:1;text-shadow:0 0 0 var(--smoke-c);transform:none}}
-@keyframes ${p}-bl-a{from{opacity:0;text-shadow:${init};transform:translate3d(${r(-15 * d)}rem,${r(8 * d)}rem,0) rotate(40deg) skewX(-70deg) scale(0.7)}40%{text-shadow:${peak}}to{opacity:1;text-shadow:0 0 0 var(--smoke-c);transform:none}}
-@keyframes ${p}-bl-b{from{opacity:0;text-shadow:${init};transform:translate3d(${r(-18 * d)}rem,${r(8 * d)}rem,0) rotate(40deg) skewX(70deg) scale(0.5)}40%{text-shadow:${peak}}to{opacity:1;text-shadow:0 0 0 var(--smoke-c);transform:none}}
-@keyframes ${p}-tl-a{from{opacity:0;text-shadow:${init};transform:translate3d(${r(-15 * d)}rem,${r(-8 * d)}rem,0) rotate(-40deg) skewX(70deg) scale(0.7)}40%{text-shadow:${peak}}to{opacity:1;text-shadow:0 0 0 var(--smoke-c);transform:none}}
-@keyframes ${p}-tl-b{from{opacity:0;text-shadow:${init};transform:translate3d(${r(-18 * d)}rem,${r(-8 * d)}rem,0) rotate(-40deg) skewX(-70deg) scale(0.5)}40%{text-shadow:${peak}}to{opacity:1;text-shadow:0 0 0 var(--smoke-c);transform:none}}
+@keyframes ${p}-c-a{from{opacity:0;filter:blur(${initB}px);transform:scale(${ic})}40%{filter:blur(${peakB}px)}to{opacity:1;filter:blur(0px);transform:none}}
+@keyframes ${p}-c-b{from{opacity:0;filter:blur(${initB}px);transform:scale(${ic2})}40%{filter:blur(${peakB}px)}to{opacity:1;filter:blur(0px);transform:none}}
+@keyframes ${p}-bl-a{from{opacity:0;filter:blur(${initB}px);transform:translate3d(${r(-15 * d)}rem,${r(8 * d)}rem,0) rotate(40deg) skewX(-70deg) scale(0.7)}40%{filter:blur(${peakB}px)}to{opacity:1;filter:blur(0px);transform:none}}
+@keyframes ${p}-bl-b{from{opacity:0;filter:blur(${initB}px);transform:translate3d(${r(-18 * d)}rem,${r(8 * d)}rem,0) rotate(40deg) skewX(70deg) scale(0.5)}40%{filter:blur(${peakB}px)}to{opacity:1;filter:blur(0px);transform:none}}
+@keyframes ${p}-tl-a{from{opacity:0;filter:blur(${initB}px);transform:translate3d(${r(-15 * d)}rem,${r(-8 * d)}rem,0) rotate(-40deg) skewX(70deg) scale(0.7)}40%{filter:blur(${peakB}px)}to{opacity:1;filter:blur(0px);transform:none}}
+@keyframes ${p}-tl-b{from{opacity:0;filter:blur(${initB}px);transform:translate3d(${r(-18 * d)}rem,${r(-8 * d)}rem,0) rotate(-40deg) skewX(-70deg) scale(0.5)}40%{filter:blur(${peakB}px)}to{opacity:1;filter:blur(0px);transform:none}}
 `;
 }
 
@@ -135,9 +133,12 @@ function renderText(text: string, ctx: WalkCtx): ReactNode {
       >
         {seg.split("").map((char) => {
           const i = ctx.idx++;
+          // Glifo transparente + sombra nítida estática: el color del humo
+          // sin animar text-shadow (la nube la pone filter, en GPU).
           const style: CSSProperties = {
             display: "inline-block",
             color: "transparent",
+            textShadow: "0 0 0 var(--smoke-c)",
           };
           if (ctx.phase === "hidden") style.opacity = 0;
           if (ctx.phase === "appearing") {
@@ -149,6 +150,7 @@ function renderText(text: string, ctx: WalkCtx): ReactNode {
                   : "bl";
             const name = `smt${ctx.level}-${variant}-${i % 2 === 0 ? "a" : "b"}`;
             style.animation = `${name} ${ctx.charDur}s ${(i * ctx.step).toFixed(3)}s ${EASE_CSS} both`;
+            style.willChange = "transform, filter, opacity";
           }
           return (
             <span key={ctx.key++} style={style}>
@@ -198,7 +200,7 @@ type SmokeVisualProps = {
 function SmokeChars({
   children,
   phase,
-  duration = 2,
+  duration = 1.2,
   intensity = 10,
   position = "bottomLeft",
   animationMode = "singleLine",
@@ -256,7 +258,7 @@ function SmokeChars({
 export function SmokeGate({
   on,
   delay = 0,
-  duration = 2,
+  duration = 1.2,
   ...rest
 }: SmokeVisualProps & { on: boolean; delay?: number }) {
   const [phase, setPhase] = useState<Phase>("hidden");

@@ -9,9 +9,12 @@ export default function Hero() {
       focusX={0.58}
       ariaLabel="STRATUM 3L — presentación"
     >
+      {/* 1.6s (no el 1.2 por defecto): la salida del preloader tapa los
+          primeros ~0.8s del estreno y con la duración corta apenas se vería */}
       <SeqStep
         from={0}
-        to={0.2}
+        to={0.3}
+        duration={1.6}
         className="inset-0 flex flex-col items-center justify-center px-6 text-center"
       >
         <p className="mb-6 font-mono text-[11px] uppercase tracking-[0.35em] text-olive sm:text-xs">
@@ -28,7 +31,7 @@ export default function Hero() {
 
       <SeqStep
         from={0}
-        to={0.09}
+        to={0.12}
         className="inset-x-0 bottom-7 flex flex-col items-center gap-3"
       >
         <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-bone-dim">
@@ -38,8 +41,8 @@ export default function Hero() {
       </SeqStep>
 
       <SeqStep
-        from={0.3}
-        to={0.56}
+        from={0.34}
+        to={0.62}
         className="inset-y-0 left-0 flex items-center px-6 sm:px-[8vw]"
       >
         <div className="max-w-md">
@@ -57,8 +60,8 @@ export default function Hero() {
       </SeqStep>
 
       <SeqStep
-        from={0.64}
-        to={0.92}
+        from={0.66}
+        to={0.94}
         className="inset-y-0 right-0 flex items-center justify-end px-6 text-right sm:px-[8vw]"
       >
         <div className="max-w-md">

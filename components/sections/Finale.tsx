@@ -13,7 +13,7 @@ export default function Finale() {
     >
       <SeqStep
         from={0.05}
-        to={0.38}
+        to={0.42}
         className="inset-0 flex items-center justify-center px-6"
       >
         <h2 className="text-center font-display uppercase leading-[0.85] text-[clamp(4rem,15vw,13rem)]">
