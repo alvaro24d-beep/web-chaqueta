@@ -10,6 +10,7 @@ import Orbit from "@/components/sections/Orbit";
 import FieldTest from "@/components/sections/FieldTest";
 import Finale from "@/components/sections/Finale";
 import Footer from "@/components/sections/Footer";
+import AdBanner from "@/components/AdBanner";
 
 export default function Home() {
   return (
@@ -17,6 +18,8 @@ export default function Home() {
       <Preloader />
       <ScrollProgress />
       <Nav />
+      {/* Banner de prueba de la plataforma de anuncios — zona "cabecera" */}
+      <AdBanner zona="cabecera" />
       {/* El contenido va por encima (z-10) del footer telón (z-0) */}
       <main className="relative z-10 bg-coal">
         <Hero />
