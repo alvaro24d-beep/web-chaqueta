@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 // Cambia esto por el dominio real del WordPress de anuncios
-const ANUNCIOS_API_BASE = 'https://tudominio.com/wp-json/ads/v1';
+const ANUNCIOS_API_BASE = 'https://mediumaquamarine-moose-793142.hostingersite.com/wp-json/ads/v1';
 
 // Por debajo de este ancho de pantalla (px) se pide la versión móvil del banner
 const UMBRAL_MOVIL = 768;
